@@ -1,0 +1,35 @@
+# Trap case (d): a step referencing an UNMAPPED capability is INERT (not an error).
+#
+# Contract: RAILS.md Gate B / §4. The step references capability `fetch-inventory`,
+# which this repo's manifest does NOT bind. The step is skipped with a clear reason
+# and the investigation continues — a portable playbook degrades gracefully, it is
+# not broken. Distinct from `reject` (a governance refusal).
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  # This repo only binds run-status; it has NO fetch-inventory capability.
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: list-available-files
+  kind: api-read
+  title: "List files available for the run's segment"
+  audience: [developer, support]
+  safety: read-only
+  request:
+    capability: fetch-inventory     # not present in the manifest -> inert
+    params: { run_id: "run-000123" }
+
+expected:
+  outcome: inert
+  gate: B-capability

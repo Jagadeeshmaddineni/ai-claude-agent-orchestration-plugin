@@ -1,0 +1,69 @@
+# =============================================================================
+# agent-orch — Skill Extension Config
+# =============================================================================
+# Add hook-point steps to any orchestration skill. EVERYTHING is commented out:
+# a commented file behaves exactly like no file — ZERO behaviour change.
+#
+# A skill only honours hook points it explicitly exposes (see each skill's
+# "## Extensibility" section). Targets at a hook point run in listed order.
+#
+# Target syntax (see plugins/agent-orch/rules/extensibility.md §6):
+#   scripts/foo.sh | foo.py    → run a script step
+#   docs/checklist.md | *.md   → read-and-act on markdown
+#   .loop-library/foo.yaml     → run a loop-library loop
+#   /agent-orch:simplify       → invoke a skill inline
+#
+# Full contract: plugins/agent-orch/rules/extensibility.md
+# =============================================================================
+
+# skills:
+
+  # --- /make — exposes before_commit, before_pr, after_pr ---------------------
+  # make:
+  #   before_commit:                       # after /build, before staging+commit
+  #     - scripts/format.sh
+  #   before_pr:                           # after push, before `gh pr create`
+  #     - .loop-library/pre-pr-review.yaml #   run a bounded review loop
+  #     - docs/checklists/pr-ready.md      #   then read-and-act a checklist
+  #   after_pr:                            # after the PR is opened
+  #     - scripts/notify-team.sh
+
+  # --- /build — exposes before_plan, after_plan, before_review, after_build ---
+  # build:
+  #   before_plan:  [docs/standards/architecture.md]
+  #   after_build:  [/agent-orch:simplify]
+
+  # --- /make-clean — exposes before_merge, after_merge ------------------------
+  # make-clean:
+  #   before_merge: [scripts/final-checks.sh]
+
+  # --- /make-validate — exposes before_validate, after_validate ---------------
+  # make-validate:
+  #   after_validate: [scripts/upload-coverage.sh]
+
+  # --- Other skills: each exposes a `before` / `after` pair around its work ----
+  # Uncomment a skill and add `before:` / `after:` lists as needed.
+  # analyse:                       { before: [], after: [] }
+  # c4:                            { before: [], after: [] }
+  # complib-guide:                 { before: [], after: [] }
+  # create-rfo:                    { before: [], after: [] }
+  # implement:                     { before: [], after: [] }
+  # improve-codebase-architecture: { before: [], after: [] }
+  # inherit-plugin:                { before: [], after: [] }
+  # init-plugin:                   { before: [], after: [] }
+  # jira:                          { before: [], after: [] }
+  # jira-work:                     { before: [], after: [] }
+  # loop-library:                  { before: [], after: [] }
+  # make-review:                   { before: [], after: [] }
+  # mcp-setup:                     { before: [], after: [] }
+  # mcp-start:                     { before: [], after: [] }
+  # mcp-stop:                      { before: [], after: [] }
+  # olly:                          { before: [], after: [] }
+  # private-cloud:                 { before: [], after: [] }
+  # refactor-to-bluestone:         { before: [], after: [] }
+  # release-me:                    { before: [], after: [] }
+  # setup-claude-md:               { before: [], after: [] }
+  # setup-constitution:            { before: [], after: [] }
+  # simplify:                      { before: [], after: [] }
+  # upgrade-plugin:                { before: [], after: [] }
+  # workflows-connectors-generate: { before: [], after: [] }

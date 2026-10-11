@@ -1,0 +1,441 @@
+# Constitution Template for Agent Orchestration
+
+This template shows the recommended sections for your `.specify/memory/constitution.md` file when using spec-kit with the `/agent-orch:implement` skill.
+
+Copy this to `.specify/memory/constitution.md` and customize for your project.
+
+---
+
+## Project Identity
+
+**Name:** [Project Name]
+**Type:** [Web API, Frontend App, CLI Tool, Library, etc.]
+**Purpose:** [One sentence describing what this project does]
+
+---
+
+## Technical Standards
+
+### Language Configuration
+
+```
+Language: TypeScript
+Version: 5.x
+Strict Mode: Enabled
+Target: ES2022
+Module: ESNext
+```
+
+### Code Quality Tools
+
+| Tool | Config File | Purpose |
+|------|-------------|---------|
+| ESLint | `.eslintrc.js` | Linting |
+| Prettier | `.prettierrc` | Formatting |
+| TypeScript | `tsconfig.json` | Type checking |
+
+### Quality Gates
+
+- [ ] All code must pass ESLint with zero errors
+- [ ] All code must pass TypeScript strict mode
+- [ ] No `any` types without explicit justification
+- [ ] All functions must have return type annotations
+
+---
+
+## Architecture Patterns
+
+### Project Structure
+
+```
+src/
+├── api/              # HTTP handlers/controllers
+│   └── v1/           # API version namespace
+├── domain/           # Business logic & entities
+│   ├── entities/     # Domain objects
+│   └── services/     # Domain services
+├── infrastructure/   # External concerns
+│   ├── database/     # DB connections & repositories
+│   ├── cache/        # Caching layer
+│   └── external/     # Third-party integrations
+├── middleware/       # Request/response middleware
+├── utils/            # Shared utilities
+└── types/            # TypeScript type definitions
+```
+
+### Design Principles
+
+1. **Separation of Concerns** - API handlers should not contain business logic
+2. **Dependency Injection** - Services receive dependencies through constructor
+3. **Repository Pattern** - All data access goes through repositories
+4. **Single Responsibility** - Each module/class has one reason to change
+
+### Allowed Patterns
+
+- Factory functions for object creation
+- Strategy pattern for interchangeable algorithms
+- Observer pattern for event handling
+- Repository pattern for data access
+
+### Prohibited Patterns
+
+- God objects (classes doing too much)
+- Circular dependencies between modules
+- Direct database access from API handlers
+- Hardcoded configuration values
+
+---
+
+## Naming Conventions
+
+### Files
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Source files | kebab-case | `user-service.ts` |
+| Test files | `*.test.ts` or `*.spec.ts` | `user-service.test.ts` |
+| Type files | `*.types.ts` | `user.types.ts` |
+| Constants | `*.constants.ts` | `api.constants.ts` |
+
+### Code
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Classes | PascalCase | `UserService` |
+| Interfaces | PascalCase | `UserRepository` |
+| Functions | camelCase | `getUserById` |
+| Variables | camelCase | `currentUser` |
+| Constants | UPPER_SNAKE_CASE | `MAX_RETRY_ATTEMPTS` |
+| Enums | PascalCase | `UserStatus` |
+| Enum values | UPPER_SNAKE_CASE | `UserStatus.ACTIVE` |
+
+---
+
+## Testing Requirements
+
+### Coverage Thresholds
+
+```
+Statements: 80%
+Branches: 75%
+Functions: 80%
+Lines: 80%
+```
+
+### Test Structure
+
+```typescript
+describe('[ModuleName]', () => {
+  describe('[methodName]', () => {
+    it('should [expected behavior] when [condition]', () => {
+      // Arrange
+      // Act
+      // Assert
+    });
+  });
+});
+```
+
+### Test Categories
+
+| Category | Location | What to Test |
+|----------|----------|--------------|
+| Unit | `tests/unit/` | Individual functions, isolated |
+| Integration | `tests/integration/` | Module interactions |
+| E2E | `tests/e2e/` | Full user flows |
+
+### Mocking Rules
+
+- Mock external services (HTTP, database in unit tests)
+- Use real database for integration tests
+- Never mock the code under test
+
+---
+
+## Error Handling
+
+### Custom Error Classes
+
+```typescript
+// Base application error
+abstract class AppError extends Error {
+  abstract statusCode: number;
+  abstract code: string;
+}
+
+// Specific errors
+class NotFoundError extends AppError {
+  statusCode = 404;
+  code = 'NOT_FOUND';
+}
+
+class ValidationError extends AppError {
+  statusCode = 400;
+  code = 'VALIDATION_ERROR';
+}
+
+class UnauthorizedError extends AppError {
+  statusCode = 401;
+  code = 'UNAUTHORIZED';
+}
+```
+
+### Error Response Format
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input provided",
+    "details": [
+      { "field": "email", "message": "Invalid email format" }
+    ]
+  }
+}
+```
+
+### Error Handling Rules
+
+1. Always catch errors at service boundaries
+2. Log errors with full context (but sanitize sensitive data)
+3. Return user-friendly messages (no stack traces in production)
+4. Use appropriate HTTP status codes
+
+---
+
+## Security Standards
+
+### OWASP Compliance
+
+| Category | Requirement | Implementation |
+|----------|-------------|----------------|
+| A01:Broken Access Control | Check permissions on every request | Auth middleware |
+| A02:Cryptographic Failures | Use strong encryption | bcrypt, AES-256 |
+| A03:Injection | Parameterized queries only | ORM/prepared statements |
+| A07:Auth Failures | Rate limiting, secure tokens | express-rate-limit, JWT |
+
+### Authentication
+
+- JWT tokens with RS256 signing
+- Access tokens expire in 15 minutes
+- Refresh tokens expire in 7 days
+- Tokens stored in httpOnly cookies (not localStorage)
+
+### Password Requirements
+
+- Minimum 12 characters
+- At least one uppercase, one lowercase, one number
+- Hashed with bcrypt (cost factor 12)
+- No password in logs or error messages
+
+### Input Validation
+
+```typescript
+// All user input must be validated at API boundary
+const schema = z.object({
+  email: z.string().email(),
+  password: z.string().min(12),
+  name: z.string().min(1).max(100),
+});
+```
+
+---
+
+## API Standards
+
+### Versioning
+
+- All endpoints prefixed with `/api/v1/`
+- Breaking changes require new version (`/api/v2/`)
+- Deprecate with 6-month warning period
+
+### Response Format
+
+**Success:**
+```json
+{
+  "data": { ... },
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 100
+  }
+}
+```
+
+**Error:**
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable message",
+    "details": []
+  }
+}
+```
+
+### HTTP Status Codes
+
+| Code | Usage |
+|------|-------|
+| 200 | Success (GET, PUT) |
+| 201 | Created (POST) |
+| 204 | No Content (DELETE) |
+| 400 | Bad Request (validation) |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 404 | Not Found |
+| 409 | Conflict |
+| 500 | Internal Server Error |
+
+---
+
+## Database Standards
+
+### Query Rules
+
+```typescript
+// ALWAYS use parameterized queries
+await db.query('SELECT * FROM users WHERE id = $1', [id]);
+
+// NEVER concatenate user input
+await db.query(`SELECT * FROM users WHERE id = ${id}`); // FORBIDDEN
+```
+
+### Migration Rules
+
+1. Every schema change requires a migration file
+2. Migrations must be reversible (up and down)
+3. Test rollback locally before deploying
+4. Never modify existing migrations
+
+### Naming
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Tables | snake_case, plural | `user_profiles` |
+| Columns | snake_case | `created_at` |
+| Indexes | `idx_table_column` | `idx_users_email` |
+| Foreign keys | `fk_table_reference` | `fk_orders_user_id` |
+
+---
+
+## Component Library (Frontend)
+
+<!-- Remove if not applicable -->
+
+### Configuration
+
+```
+COMPONENT_LIBRARY_ROOT: /path/to/Component-Library
+DOCS_ROOT: ${COMPONENT_LIBRARY_ROOT}/packages/ui-docs/src
+PACKAGE_DOCS: ${DOCS_ROOT}/<package-name>
+COMPONENT_DOCS: ${DOCS_ROOT}/<package-name>/<ComponentName>/<ComponentName>.mdx
+COMPONENT_STORIES: ${DOCS_ROOT}/<package-name>/<ComponentName>/<ComponentName>.stories.tsx
+MATERIALS: ${DOCS_ROOT}/materials
+```
+
+### Design Tokens
+
+| Token Type | Location | Example |
+|------------|----------|---------|
+| Colors | `materials/Colours.mdx` | `theme.base.color.primary` |
+| Spacing | `materials/Spacing.mdx` | `gap={200}` |
+| Typography | `materials/Typography.mdx` | `variant="heading-lg"` |
+| Borders | `materials/Borders.mdx` | `borderRadius="md"` |
+
+### Core Packages
+
+| Package | Components |
+|---------|------------|
+| `@org/bsds-core` | Button, Input, Layout, Stack, Cluster, Text |
+| `@org/bsds-forms` | Form, FormField, validation |
+| `@org/bsds-icons` | Icon library |
+| `@org/bsds-table` | Table, DataGrid |
+
+### UI Pattern Packages
+
+| Package | Purpose |
+|---------|---------|
+| `@org/ui-modal` | Modal dialogs |
+| `@org/ui-drawer` | Slide-out panels |
+| `@org/ui-toast` | Toast notifications |
+| `@org/ui-menu` | Dropdown menus |
+
+### Frontend Rules
+
+1. **Always** check if a component exists before creating custom
+2. Read `.mdx` docs and `.stories.tsx` for API and examples
+3. No hardcoded colors - use theme tokens
+4. No hardcoded spacing - use spacing scale
+5. Maintain WCAG 2.1 AA accessibility
+6. Icons in buttons should be `size={16}`
+
+---
+
+## Documentation Requirements
+
+### Required Documentation
+
+| Type | When Required |
+|------|---------------|
+| API docs | Every public endpoint |
+| JSDoc | Every exported function |
+| README | Every new module/package |
+| Architecture Decision Record | Significant design choices |
+
+### JSDoc Format
+
+```typescript
+/**
+ * Retrieves a user by their unique identifier.
+ *
+ * @param id - The unique user identifier
+ * @returns The user object if found
+ * @throws {NotFoundError} When user doesn't exist
+ * @example
+ * const user = await getUserById('123');
+ */
+async function getUserById(id: string): Promise<User> {
+  // ...
+}
+```
+
+---
+
+## Agent Orchestration Context
+
+<!-- This section helps agents understand your specific project -->
+
+### Key Integration Points
+
+List the main areas agents should understand:
+
+- **Authentication**: `src/middleware/auth.ts`
+- **Database**: `src/infrastructure/database/`
+- **API Routes**: `src/api/v1/`
+- **Business Logic**: `src/domain/services/`
+
+### Existing Patterns to Follow
+
+When implementing new features, reference these existing implementations:
+
+| Feature Type | Reference Implementation |
+|--------------|-------------------------|
+| CRUD API | `src/api/v1/users/` |
+| Service | `src/domain/services/user-service.ts` |
+| Repository | `src/infrastructure/database/user-repository.ts` |
+| Tests | `tests/unit/domain/services/user-service.test.ts` |
+
+### Known Constraints
+
+- Maximum request payload: 10MB
+- Rate limit: 100 requests/minute per IP
+- Database connection pool: 20 connections
+
+### Technical Debt (Do Not Extend)
+
+These areas need refactoring - avoid adding to them:
+
+- [ ] Legacy auth module in `src/auth/` (use new `src/middleware/auth.ts`)
+- [ ] Old validation in `src/utils/validate.ts` (use Zod schemas)

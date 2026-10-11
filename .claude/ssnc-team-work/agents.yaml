@@ -1,0 +1,22 @@
+# =============================================================================
+# team-work — Agent Extension Config (reserved)
+# =============================================================================
+# The team-work plugin currently ships NO standalone agents — its skills run
+# inline or delegate to agent-orch agents. This file is reserved so that:
+#   * if team-work gains agents later, they extend the same way (before/replace/after);
+#   * a team can override an agent-orch agent *specifically when invoked by a
+#     team-work skill* by listing it here (team-work config takes precedence for
+#     team-work skills; otherwise .claude/ssnc-agent-orch/agents.yaml applies).
+#
+# EVERYTHING is commented out: a commented file behaves exactly like no file —
+# ZERO behaviour change. Same before/replace/after model as agent-orch.
+#
+# Full contract: plugins/agent-orch/rules/extensibility.md §2
+# =============================================================================
+
+# agents:
+  # Example — override the scribe only when a team-work skill invokes it:
+  # scribe:
+  #   before: [docs/wiki/style-guide.md]
+  #   replace:
+  #   after:  []

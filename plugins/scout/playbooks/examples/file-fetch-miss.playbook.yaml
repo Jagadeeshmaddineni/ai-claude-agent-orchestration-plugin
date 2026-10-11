@@ -1,0 +1,148 @@
+apiVersion: scout/v0.3
+kind: Playbook
+
+# Reference playbook that validates against playbook.schema.json (v0.3).
+# Intentionally generic: a data-fetch step reports "no files" for a run, and the
+# investigation decides whether data is genuinely missing, present-but-mismatched,
+# or a fetcher/mount fault. No application-, account-, or vendor-specific detail here.
+
+metadata:
+  id: file-fetch-miss
+  title: "File-fetch step reports no data for a run"
+  summary: >
+    Diagnoses a pipeline/job run whose file-fetch step reports missing input data, and
+    decides whether the data is genuinely absent, present-but-mismatched to the run's
+    parameters, or a fetcher/mount fault requiring engineering.
+  owner: "example-owner"
+  kind: investigation
+  tags: [file-fetch, data-availability, pipeline]
+  triggers:
+    keywords: ["no files", "not on the mount", "missing data", "fetch failed", "no data for date"]
+    signals:
+      - source: run-status
+        matches: "fetch step: failed"
+  last_verified: "2026-07-16"
+
+audience: [developer, support, business]
+
+inputs:
+  - name: run_id
+    type: string
+    required: true
+    description: "The run identifier to investigate."
+    example: "run-000123"
+  - name: business_date
+    type: date
+    required: false
+    description: "The date segment the run targeted, if known."
+
+steps:
+  - id: fetch-run-status
+    kind: api-read
+    title: "Fetch the run's status and stage breakdown"
+    audience: [developer, support, business]
+    safety: read-only
+    request:
+      capability: run-status
+      params:
+        run_id: "${inputs.run_id}"
+    expect:
+      description: "A run object with a status and a per-stage list including the fetch step."
+    on_error: halt
+
+  - id: list-available-files
+    kind: api-read
+    title: "List what files are actually available for the run's segment"
+    audience: [developer, support, business]
+    safety: read-only
+    request:
+      capability: fetch-inventory
+      params:
+        run_id: "${inputs.run_id}"
+        business_date: "${inputs.business_date}"
+    expect:
+      description: "A count and listing of files present on the source for the requested segment."
+    on_error: continue
+
+  - id: compare-runtime-vs-now
+    kind: time-travel
+    title: "Was data absent at run time but present now?"
+    audience: [developer, support]
+    safety: read-only
+    request:
+      capability: fetch-inventory
+      params:
+        run_id: "${inputs.run_id}"
+    note: >
+      If files are present now but the run failed earlier, the data likely landed late —
+      a re-run should succeed.
+
+  - id: check-existing-error-tracker
+    kind: skill-call
+    title: "If the team has an error-tracker investigator, pull related errors"
+    audience: [developer, support]
+    safety: read-only
+    request:
+      skill: "sentry:investigate"        # inert if the repo doesn't have this skill
+      args: "run ${inputs.run_id}"
+    note: >
+      Complements Scout — reuses the team's existing investigator rather than
+      re-implementing error-tracker access.
+    on_error: continue
+
+  - id: guide-breakglass-inspect
+    kind: guided-human
+    title: "If a fetcher/mount fault is suspected, inspect the source directly"
+    audience: [developer]
+    safety: read-only
+    instructions: >
+      Request breakglass for the fetcher host, then run a read-only listing of the
+      expected source path for the run's segment and report the file count and names.
+      Do not modify anything on the mount.
+
+conclusions:
+  - id: genuinely-missing
+    when: "no files available for the requested segment, now or at run time"
+    verdict: "The input data has not landed yet for this segment."
+    confidence: confirmed
+    guidance: "Check the upstream source/export; re-run once the data lands."
+    audience: [developer, support, business]
+
+  - id: landed-late
+    when: "files absent at run time but present now"
+    verdict: "Data landed after the run started."
+    confidence: likely
+    guidance: "Re-run the job now — it should pick up the data."
+    audience: [developer, support, business]
+
+  - id: wrong-params
+    when: "files present but not matching the run's requested segment/parameters"
+    verdict: "Data exists but the run's parameters do not match it."
+    confidence: likely
+    guidance: "Re-run with corrected date/parameters."
+    audience: [developer, support, business]
+
+  - id: fetcher-fault
+    when: "files should be present for the segment and are not"
+    verdict: "Possible fetcher/mount fault — needs engineering."
+    confidence: unknown
+    guidance: "Escalate to engineering with the specific host/mount and segment."
+    audience: [developer, support]
+
+redaction:
+  never_return:
+    - "connection strings"
+    - "credentials / tokens"
+    - "absolute host paths beyond the segment being discussed"
+  mask:
+    - field: run_id
+      strategy: full-mask
+  default: safe
+
+surfaces:
+  claude-code:
+    skill_name: investigate-file-fetch-miss
+  mcp:
+    tool_name: scout_investigate_file_fetch_miss
+  chat:
+    intro: "I'll check what happened with that run's data fetch and let you know what I find."

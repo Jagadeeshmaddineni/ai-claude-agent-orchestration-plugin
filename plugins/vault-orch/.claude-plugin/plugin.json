@@ -1,0 +1,10 @@
+{
+  "name": "vault-orch",
+  "description": "Provisions an Obsidian vault into any agent-orch repo so /make + /build sessions, business-requirement intake notes, and Jira tickets cross-link as a navigable knowledge graph. Core principle: store the relationships, never the state — the vault owns immutable references (which sessions/requirements touch which ticket) and the requirement thinking; Jira keeps owning mutable status. The ticket layer is DERIVED (phantom graph nodes via frontmatter wikilinks + live Dataview queries), never a stored per-ticket note or sync script. Four skills: :init (provision .obsidian/ with userIgnoreFilters baked in for multi-GB repos, Dataview, templates, 3 dashboards, git hygiene), :backfill (idempotent variant-B frontmatter stamper — header-only diff, skips code/links, generic project-key regex, dry-run default, one mechanical PR), :intake (scaffold a requirement note that feeds team-work:work-prep/work-plan then /make), :exec-update (exec-altitude weekly summary written into the vault as a dated, Dataview-indexed, Mermaid-charted node). A defensive Stop hook auto-promotes each finished session's prompt.md metadata into frontmatter, keeping the vault current with zero forking of the agent-orch skills. When a team-work LLM wiki is present in-repo (.team-work/wiki-config.md), :init also installs a read-only wiki.md Dataview dashboard that surfaces the wiki's pages by type/status and bridges them into the same Obsidian graph via the intake note's optional wiki: wikilink — vault-orch only reads/surfaces the wiki, never rewriting or stamping it.",
+  "version": "0.1.0",
+  "author": {
+    "name": "AI Governance Team",
+    "email": "ai-governance@ssnc.com"
+  },
+  "license": "MIT"
+}

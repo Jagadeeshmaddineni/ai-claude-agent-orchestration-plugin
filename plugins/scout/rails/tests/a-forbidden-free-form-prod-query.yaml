@@ -1,0 +1,36 @@
+# Trap case (a): a forbidden free-form production query is REJECTED.
+#
+# Contract: RAILS.md Gate A / §2.A.1. A `query` step whose target is a prod store
+# and which is NOT an allowlisted parameterized proc is forbidden by definition —
+# rejected even though the author (mistakenly) tagged it read-only. This is the
+# enforcement that prevents the free-form-prod-SQL vulnerability class (INV-7).
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities:
+    # The referenced capability resolves to a RAW connection / free-form query,
+    # not a named allowlisted proc — so it is forbidden.
+    - name: adhoc-store-read
+      kind: query
+      endpoint: "raw connection: SELECT * FROM <table>"
+      auth_env: "STORE_DSN"
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: run-adhoc-query
+  kind: query
+  title: "Run an ad-hoc query against the production store"
+  audience: [developer]
+  safety: read-only            # authored read-only, but Gate A.1 overrides
+  request:
+    capability: adhoc-store-read
+    sql: "SELECT * FROM sensitive_table WHERE 1=1"
+
+expected:
+  outcome: reject
+  gate: A-safety

@@ -1,0 +1,95 @@
+# Project CLAUDE.md (Root)
+
+This is the lean root CLAUDE.md. Universal standards live in `.claude/rules/` (auto-loaded).
+Domain-specific standards live in subdirectory `CLAUDE.md` files (loaded when working in that directory).
+
+---
+
+## Project Overview
+
+[Project name] is a [type of application] that [primary purpose].
+
+**Tech Stack:**
+- Language: [e.g., TypeScript, Python, Go]
+- Framework: [e.g., Next.js, Express, FastAPI]
+- Database: [e.g., PostgreSQL, MongoDB]
+- Testing: [e.g., Jest, pytest, go test]
+
+---
+
+## Git Workflow
+
+### Branch Naming
+
+- `feature/[ticket]-short-description`
+- `fix/[ticket]-short-description`
+- `refactor/short-description`
+
+### Commit Messages
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+---
+
+## Environment Variables
+
+### Required
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | Database connection string | `postgresql://...` |
+| `JWT_SECRET` | Secret for JWT signing | (generate secure random) |
+| `NODE_ENV` | Environment | `development`, `production` |
+
+### Optional
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LOG_LEVEL` | Logging verbosity | `info` |
+| `PORT` | Server port | `3000` |
+
+---
+
+## Agent Orchestration Notes
+
+### Key Files to Understand
+
+- `src/index.ts` - Application entry point
+- `src/config/` - Configuration loading
+- `src/middleware/auth.ts` - Authentication middleware
+
+### Patterns to Follow
+
+When implementing new features, follow the pattern in:
+- API routes: `src/api/users.ts`
+- Services: `src/services/user-service.ts`
+- Tests: `tests/unit/services/user-service.test.ts`
+
+### Known Technical Debt
+
+- [ ] Auth module needs refactoring (legacy code)
+- [ ] Missing integration tests for payment flow
+
+---
+
+## Standards Structure
+
+Universal standards are in `.claude/rules/` (always loaded by Claude Code):
+- `security-baseline.md` - OWASP, auth, encryption
+- `code-standards.md` - Language/style, naming, error handling
+- `testing-standards.md` - Coverage, patterns, commands
+
+Domain-specific standards are in subdirectory `CLAUDE.md` files:
+- `[api-dir]/CLAUDE.md` - REST conventions, validation
+- `[db-dir]/CLAUDE.md` - Query standards, migrations
+- `[frontend-dir]/CLAUDE.md` - Component library, WCAG
+
+The ISC2-certified Staff SWE persona is loaded automatically via the agent-orch plugin.

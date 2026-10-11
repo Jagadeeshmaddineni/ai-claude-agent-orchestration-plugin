@@ -1,0 +1,39 @@
+# v0.4 (2/5): a TOOLBOX query bound to free-form SQL is REJECTED (Gate A.1 still bites).
+#
+# Contract: RAILS.md §2.A.1 + §4 (v0.4). A toolbox tool resolves EXACTLY like a
+# declared capability, so the free-form-query safety check applies identically.
+# `db-read` is in investigation_toolbox[] (resolves at Gate B), but its endpoint
+# is free-form SQL ("SELECT ...") — mapped-but-free-form -> reject at A-safety.
+# The ambient toolbox is UNDER the rails, never around them.
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities: []
+  investigation_toolbox:
+    - name: db-read
+      kind: query
+      endpoint: "SELECT * FROM rows WHERE key = ?"   # free-form binding
+      auth_env: "STORE_DSN"
+      production: true
+      ambient: true
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: read-rows
+  kind: query
+  title: "Read rows via a toolbox tool bound to free-form SQL"
+  audience: [developer]
+  safety: read-only            # authored read-only; Gate A.1 overrides
+  request:
+    capability: db-read
+    params: { key: "run-000123" }
+
+expected:
+  outcome: reject
+  gate: A-safety
+  resolved_from: investigation_toolbox

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://code.ssnc.dev/ai/claude-agent-orchestration-plugin/plugins/scout/schema/capability-manifest.schema.json",
+  "title": "Scout Capability Manifest",
+  "description": "Machine-checkable contract for the Capability Manifest /scout:setup writes to a repo's .claude/scout/capability-manifest.md (v0.3). Binds abstract capability names to a repo's real surfaces, maps audience tiers onto repo roles, and lists existing investigation skills + investigator agents. v0.3 adds an optional richer per-capability auth: {style, env?}, back-compatible with the bare auth_env string.",
+  "type": "object",
+  "required": ["generated_by", "surfaces", "capabilities", "governance"],
+  "additionalProperties": true,
+  "$defs": {
+    "capabilityItem": {
+      "type": "object",
+      "required": ["name", "kind", "endpoint", "audience", "safety"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "kind": { "enum": ["api-read", "query", "shell-read"] },
+        "endpoint": { "type": "string" },
+        "auth_env": { "type": "string", "description": "Env var NAME only; value never read (INV-5). Back-compat shorthand for auth: {style: env, env: <NAME>}." },
+        "auth": {
+          "type": "object",
+          "description": "Auth-style modeling (v0.3). Richer optional form; back-compatible with the bare auth_env shorthand. 'caller-token' = uses the invoking user's own token/creds; 'env' = an env var (name in `env`, value never read, INV-5); 'tenant-config' = resolved from per-tenant config at run time.",
+          "required": ["style"],
+          "additionalProperties": false,
+          "properties": {
+            "style": { "enum": ["caller-token", "env", "tenant-config"] },
+            "env": { "type": "string", "description": "Env var NAME only (used when style=env); value never read (INV-5)." }
+          }
+        },
+        "audience": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["developer", "support", "business", "admin"] }
+        },
+        "safety": { "const": "read-only", "description": "Discovery records read-only capabilities only." },
+        "production": { "type": "boolean", "description": "Touches a production data store? Rails treat a non-allowlisted prod query as forbidden." },
+        "ambient": { "type": "boolean", "description": "Ambient toolbox flag (v0.4). Default-interpreted true inside investigation_toolbox[] (the tool is implicitly available to every investigation/step without re-declaration); n/a (ignored) inside capabilities[]. When true, the tool resolves for any step/agent that needs it AND may still be named explicitly in request.capability; every resolution still passes the rails and emits a DecisionRecord." },
+        "source": { "type": "string" }
+      }
+    }
+  },
+  "properties": {
+    "generated_by": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "repo": { "type": "string" },
+    "surfaces": {
+      "type": "object",
+      "required": ["claude-code"],
+      "additionalProperties": true,
+      "properties": {
+        "claude-code": { "enum": ["available", "absent"] },
+        "mcp": { "enum": ["available", "absent"] },
+        "chat": { "enum": ["available", "absent"] },
+        "wiki": { "enum": ["available", "absent"] },
+        "wiki_root": { "type": "string" },
+        "qmd": { "type": "string" }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/capabilityItem" }
+    },
+    "investigation_toolbox": {
+      "type": "array",
+      "description": "The ambient shared capability layer (v0.4). Optional. Common investigation tools (app-logs, db-read, traces, mcp, per-repo other) available to EVERY investigation and every step/agent WITHOUT re-declaration in a playbook. Each entry has the SAME shape as a capabilities[] item (shared $defs/capabilityItem) plus the optional `ambient` flag (default-interpreted true here). Resolution is capabilities[]-first, then investigation_toolbox[] — a request.capability resolves against the union of both. Every resolution, ambient or explicit, still passes the rails and emits a DecisionRecord; tiering/redaction/production markers apply identically. Absent section = identical v0.3 behavior (backward compatible).",
+      "items": { "$ref": "#/$defs/capabilityItem" }
+    },
+    "governance": {
+      "type": "object",
+      "required": ["role_map"],
+      "additionalProperties": true,
+      "properties": {
+        "role_map": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "developer": { "type": "array", "items": { "type": "string" } },
+            "support": { "type": "array", "items": { "type": "string" } },
+            "business": { "type": "array", "items": { "type": "string" } },
+            "admin": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "approval_tiers": {
+          "type": "array",
+          "description": "Which tiers may confirm a needs-approval step. Never business.",
+          "items": { "enum": ["developer", "support", "admin"] }
+        },
+        "contribution": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "note": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      }
+    },
+    "investigators": {
+      "type": "object",
+      "description": "Role -> agent map for orchestrated/freewheel investigation. A role with no agent is inert.",
+      "additionalProperties": false,
+      "properties": {
+        "infra": { "type": "string" },
+        "data": { "type": "string" },
+        "app": { "type": "string" },
+        "security": { "type": "string" },
+        "observability": { "type": "string" },
+        "incident": { "type": "string" },
+        "root-cause": { "type": "string" },
+        "generic": { "type": "string" }
+      }
+    }
+  }
+}

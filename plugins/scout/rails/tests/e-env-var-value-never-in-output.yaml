@@ -1,0 +1,53 @@
+# Trap case (e): an env-var VALUE never appears in output (INV-5).
+#
+# Contract: RAILS.md Gate E / §3. The capability authenticates via ${env.API_TOKEN}.
+# The value is used to connect but must NEVER be read into context or echoed. Here
+# the step's raw output accidentally contains the token value; the engine treats it
+# as an implicit never_return, BLOCKS the output, and the token value must not appear
+# anywhere in the DecisionRecord.
+#
+# `_test_env_values` supplies the value ONLY to the test harness so it can assert the
+# leak is caught. The real engine holds the value transiently for the connection and
+# never surfaces it; fixtures never record real secrets.
+
+playbook:
+  audience: [developer]
+  redaction:
+    default: safe
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: fetch-run-status
+  kind: api-read
+  title: "Fetch run status"
+  audience: [developer]
+  safety: read-only
+  request:
+    capability: run-status
+    params:
+      run_id: "run-000123"
+      token: "${env.API_TOKEN}"     # name only in the playbook — never a value
+  _test_env_values:
+    API_TOKEN: "tok_live_SUPERSECRET_do_not_echo"
+
+# The step's raw output leaked the token value (the bug the engine must catch).
+produced_output:
+  status: "OK"
+  echoed_auth: "tok_live_SUPERSECRET_do_not_echo"
+
+must_not_appear_in_record:
+  - "tok_live_SUPERSECRET_do_not_echo"
+  - "SUPERSECRET"
+
+expected:
+  outcome: reject
+  gate: F-redaction

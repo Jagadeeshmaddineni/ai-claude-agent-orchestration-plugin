@@ -1,0 +1,36 @@
+# G9 (1/3): an UNMAPPED query is INERT, not reject.
+#
+# Contract: RAILS.md §1 gate ordering (G9). Capability resolution (Gate B) runs
+# BEFORE the free-form safety check (Gate A.1). This step references a query
+# capability the manifest does NOT bind, so it renders `inert` (a portable
+# playbook degrades gracefully) instead of fail-closing to `reject` as it did
+# pre-G9. Distinct from a MAPPED-but-free-form query (fixture j), which rejects.
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  # This repo binds no query capability at all.
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: count-records
+  kind: query
+  title: "Count records for the run (capability not bound here)"
+  audience: [developer]
+  safety: read-only
+  request:
+    capability: record-counts     # not in the manifest -> inert (was reject pre-G9)
+    params: { run_id: "run-000123" }
+
+expected:
+  outcome: inert
+  gate: B-capability

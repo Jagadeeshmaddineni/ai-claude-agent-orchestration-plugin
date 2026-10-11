@@ -1,0 +1,28 @@
+# =============================================================================
+# agent-orch — Pluggable Git Workflow (external-repo offload)
+# =============================================================================
+# Offload git/PR steps to an EXTERNAL repo that owns the actual scripts and
+# markdown. agent-orch orchestrates WHEN steps run; the external repo owns WHAT
+# they do. EVERYTHING is commented out: a commented file behaves like no file —
+# no clone, current git flow unchanged.
+#
+# Mechanism (see plugins/agent-orch/rules/extensibility.md §5):
+#   1. Shallow-clone `source` at `ref` to
+#      .claude/ssnc-agent-orch/.cache/<repo-name>@<ref>/   (git-ignored)
+#   2. At each hook point under `steps`, run the listed paths from the cache.
+#   3. The skill shows source/ref + steps and asks for confirmation before the
+#      first run in a session (unless in an auto-approved permission mode).
+#
+# Full contract: plugins/agent-orch/rules/extensibility.md §5
+# =============================================================================
+
+# git:
+#   source: git@code.ssnc.dev:BluedoorAIUK/test_codeReviewFlow.git
+#   ref: main                      # branch, tag, or SHA
+#
+#   steps:                         # hook point → paths WITHIN the cloned repo
+#     before_pr:
+#       - scripts/lint.sh
+#       - flows/review.md
+#     after_pr:
+#       - scripts/post-merge-checks.sh

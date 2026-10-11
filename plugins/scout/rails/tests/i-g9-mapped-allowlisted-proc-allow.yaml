@@ -1,0 +1,36 @@
+# G9 (2/3): a MAPPED, allowlisted-proc query is ALLOWED.
+#
+# Contract: RAILS.md §1 + §2.A.1. The query resolves to a `kind: query` capability
+# whose endpoint names a specific allowlisted parameterized proc (not free-form
+# SQL, no raw connection, no SQL keywords). It passes Gate B (mapped), Gate A.1
+# (not free-form), Gate C (audience), Gate F (nothing to redact) -> allow.
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities:
+    - name: record-counts
+      kind: query
+      endpoint: "proc:sp_record_counts_by_run"   # named allowlisted proc — not free-form
+      auth_env: "STORE_DSN"
+      production: true
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: count-records
+  kind: query
+  title: "Count records for the run via the allowlisted proc"
+  audience: [developer]
+  safety: read-only
+  request:
+    capability: record-counts
+    params: { run_id: "run-000123" }
+
+expected:
+  outcome: allow
+  gate: null
+  resolved_env: production

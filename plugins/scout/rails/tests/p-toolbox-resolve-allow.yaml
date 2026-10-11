@@ -1,0 +1,47 @@
+# v0.4 (1/5): a step whose capability is ONLY in investigation_toolbox resolves + allows.
+#
+# Contract: RAILS.md §4 (v0.4). Gate B resolves `request.capability` against
+# capabilities[] ∪ investigation_toolbox[], capabilities-first. Here `db-read`
+# is NOT in capabilities[] — it is an AMBIENT toolbox tool. It still resolves,
+# passes Gate A.1 (named allowlisted proc, not free-form), Gate C (audience),
+# Gate F (nothing to redact) -> allow. The DecisionRecord records
+# resolved_from: investigation_toolbox so an audit can tell it apart from a
+# declared capability; authority is identical, only discovery differs.
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+  investigation_toolbox:
+    - name: db-read
+      kind: query
+      endpoint: "proc:sp_read_rows_by_key"   # named allowlisted proc — not free-form
+      auth_env: "STORE_DSN"
+      production: true
+      ambient: true
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: read-rows
+  kind: query
+  title: "Read rows via the ambient toolbox db-read tool"
+  audience: [developer]
+  safety: read-only
+  request:
+    capability: db-read          # only in investigation_toolbox[], not capabilities[]
+    params: { key: "run-000123" }
+
+expected:
+  outcome: allow
+  gate: null
+  resolved_env: production
+  resolved_from: investigation_toolbox

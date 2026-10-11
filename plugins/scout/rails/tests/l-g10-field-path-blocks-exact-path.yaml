@@ -1,0 +1,49 @@
+# G10 (2/4): the structured {field_path} form blocks the EXACT output path.
+#
+# Contract: RAILS.md §7 (G10) + schema redaction.never_return structured form.
+# never_return carries { field_path: "result.connection.host" }. The output has a
+# nested value at exactly that dotted path, so the redaction pass BLOCKS it
+# deterministically (no heuristics). The blocked path's value must not appear in
+# the DecisionRecord. builtins is off here to prove the field_path block stands
+# on its own (not merely because a builtin also caught it).
+
+playbook:
+  audience: [developer]
+  redaction:
+    never_return:
+      - { field_path: "result.connection.host" }
+    builtins: off
+    default: safe
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: fetch-run-status
+  kind: api-read
+  title: "Fetch run status"
+  audience: [developer]
+  safety: read-only
+  request:
+    capability: run-status
+    params: { run_id: "run-000123" }
+
+produced_output:
+  status: "OK"
+  result:
+    connection:
+      host: "internal-db-7.corp.example"
+
+must_not_appear_in_record:
+  - "internal-db-7.corp.example"
+
+expected:
+  outcome: reject
+  gate: F-redaction

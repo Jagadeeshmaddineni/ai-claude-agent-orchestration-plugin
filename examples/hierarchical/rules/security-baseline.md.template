@@ -1,0 +1,32 @@
+# Security Baseline
+
+These standards apply to ALL code in this project.
+
+## Authentication
+
+- Use [JWT/Session] for authentication
+- Tokens expire after [1 hour]
+- Refresh tokens valid for [7 days]
+
+## Authorization
+
+- Check permissions before data access
+- Use middleware for route protection
+- Never expose sensitive data in responses
+
+## Data Protection
+
+- Hash passwords with bcrypt (cost factor 12+)
+- Encrypt sensitive data at rest
+- Use parameterized queries only (no string concatenation)
+- Sanitize all user input
+
+## OWASP Top 10 Compliance
+
+- Injection: Use parameterized queries and prepared statements
+- Broken Auth: Enforce strong password policies, rate-limit login attempts
+- XSS: Escape output, use Content-Security-Policy headers
+- CSRF: Use anti-CSRF tokens for state-changing operations
+- Security Misconfiguration: No default credentials, disable unnecessary features
+- Sensitive Data Exposure: Encrypt in transit (TLS) and at rest
+- Broken Access Control: Deny by default, validate on server side

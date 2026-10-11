@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://code.ssnc.dev/ai/claude-agent-orchestration-plugin/plugins/scout/schema/index.schema.json",
+  "title": "Scout Playbook Index",
+  "description": "Machine-checkable contract for the per-repo playbook INDEX (v0.3). Lives at .claude/scout/playbooks/INDEX.md; /scout:author and /scout:harvest append an entry on every write; /scout:investigate and /scout:runbook read it FIRST to route by natural language, then open only the matched playbook(s). Minimal by design: enough to ROUTE, never a duplicate of the playbook. See index.schema.md for the normative prose spec.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "playbooks"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": { "const": "scout/v0.3" },
+    "kind": { "const": "PlaybookIndex" },
+    "generated_by": { "type": "string", "description": "OPTIONAL. Tool/skill that last wrote the index." },
+    "generated_at": { "type": "string", "description": "OPTIONAL. Quoted timestamp of the last write." },
+    "playbooks": {
+      "type": "array",
+      "description": "The routing entries. One per playbook in the store.",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "kind", "keywords", "when_to_use", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "kebab-case id; MUST match the target playbook's metadata.id."
+          },
+          "title": { "type": "string", "minLength": 1, "description": "One-line human title (mirrors the playbook's title)." },
+          "kind": {
+            "enum": ["investigation", "procedure", "toolbox"],
+            "description": "Playbook class; lets runners filter (investigate -> investigation, runbook -> procedure). A 'toolbox' entry (v0.4) is NEVER routed to by an incoming symptom; runners compose it as a sub-procedure only."
+          },
+          "keywords": {
+            "type": "array",
+            "minItems": 1,
+            "description": "The natural-language routing triggers a runner matches an incoming request against.",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "when_to_use": { "type": "string", "minLength": 1, "description": "One-line guidance on when this playbook applies (disambiguates near-collisions)." },
+          "path": { "type": "string", "minLength": 1, "description": "Path to the playbook file, relative to the playbook store (.claude/scout/playbooks/)." }
+        }
+      }
+    }
+  }
+}

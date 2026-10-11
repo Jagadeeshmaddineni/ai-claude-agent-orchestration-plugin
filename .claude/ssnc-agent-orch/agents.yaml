@@ -1,0 +1,59 @@
+# =============================================================================
+# agent-orch — Agent Extension Config
+# =============================================================================
+# Override or extend any orchestration agent. EVERYTHING here is commented out:
+# a commented file behaves exactly like no file — ZERO behaviour change.
+#
+# Each agent supports three optional keys:
+#   before:   list of globs/markdown/scripts/skill-refs run BEFORE our agent
+#   replace:  if non-empty, your target REPLACES our agent for this role
+#   after:    list of targets run AFTER our agent (or the replacement)
+#
+# Target syntax (see plugins/agent-orch/rules/extensibility.md §6):
+#   /agent-orch:simplify        → invoke a skill
+#   /loop ...                   → run a bounded loop
+#   .loop-library/foo.yaml      → run a loop-library loop
+#   scripts/foo.sh | foo.py     → run a script
+#   docs/adr/*  | NOTES.md      → read-and-act on markdown
+#
+# Uncomment only what you want. Anything you leave commented runs as today.
+# Full contract: plugins/agent-orch/rules/extensibility.md
+# =============================================================================
+
+# agents:
+
+  # --- Worked example from the original feature request -----------------------
+  # architect:
+  #   before:
+  #     - docs/adr/*                      # feed every ADR to the architect first
+  #   replace:                            # leave empty → our architect runs
+  #     #  e.g.  .claude/agents/our-architect.md   → your architect replaces ours
+  #   after:
+  #     - .loop-library/architect.yaml    # run a loop-library loop afterwards
+
+  # --- Core agents ------------------------------------------------------------
+  # advocate:           { before: [], replace: , after: [] }
+  # api:                { before: [], replace: , after: [] }
+  # builder:            { before: [], replace: , after: [] }
+  # c4-scribe:          { before: [], replace: , after: [] }
+  # content-specialist: { before: [], replace: , after: [] }
+  # data-engineer:      { before: [], replace: , after: [] }
+  # database:           { before: [], replace: , after: [] }
+  # debugger:           { before: [], replace: , after: [] }
+  # devops:             { before: [], replace: , after: [] }
+  # incident-responder: { before: [], replace: , after: [] }
+  # jira-triage:        { before: [], replace: , after: [] }
+  # legacy-modernizer:  { before: [], replace: , after: [] }
+  # migration:          { before: [], replace: , after: [] }
+  # ml-engineer:        { before: [], replace: , after: [] }
+  # observability:      { before: [], replace: , after: [] }
+  # performance:        { before: [], replace: , after: [] }
+  # private-cloud:      { before: [], replace: , after: [] }
+  # quality-reviewer:   { before: [], replace: , after: [] }
+  # refactorer:         { before: [], replace: , after: [] }
+  # scribe:             { before: [], replace: , after: [] }
+  # security:           { before: [], replace: , after: [] }
+  # spec-reviewer:      { before: [], replace: , after: [] }
+  # telemetry:          { before: [], replace: , after: [] }
+  # uiux:               { before: [], replace: , after: [] }
+  # validator:          { before: [], replace: , after: [] }

@@ -1,0 +1,42 @@
+# G10 (3/4): builtins: off + no matching never_return -> NOT blocked (toggle proof).
+#
+# Contract: RAILS.md §7 (G10) redaction.builtins toggle. This output carries a
+# value that the built-in credential patterns WOULD catch (a field named `token`),
+# but the author set builtins: off and declared no matching never_return. This
+# proves the toggle actually disables the built-in layer — the step is ALLOWED.
+# (This is the rare, deliberate case where a value a builtin would catch must be
+# returned; the author opts out explicitly.)
+
+playbook:
+  audience: [developer]
+  redaction:
+    builtins: off
+    default: safe
+
+manifest:
+  capabilities:
+    - name: list-tokens
+      kind: api-read
+      endpoint: "GET /api/design/tokens"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: list-design-tokens
+  kind: api-read
+  title: "List design tokens (the word 'token' here is not a credential)"
+  audience: [developer]
+  safety: read-only
+  request:
+    capability: list-tokens
+    params: { theme: "default" }
+
+produced_output:
+  status: "OK"
+  token: "spacing-md"          # a design token name, not a secret; builtins off
+
+expected:
+  outcome: allow
+  gate: null

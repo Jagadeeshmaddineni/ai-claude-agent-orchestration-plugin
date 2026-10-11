@@ -1,0 +1,44 @@
+{
+  "mcp": {
+    "agent-orch-jira": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/jira",
+      "enabled": false
+    },
+    "agent-orch-confluence": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/confluence",
+      "enabled": false
+    },
+    "agent-orch-testrail": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/testrail",
+      "enabled": false
+    },
+    "agent-orch-azuredevops": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/azuredevops",
+      "enabled": false
+    },
+    "agent-orch-playwright": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/playwright",
+      "enabled": false
+    },
+    "agent-orch-sonarqube": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/sonarqube",
+      "enabled": false
+    },
+    "agent-orch-ssccloud": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/ssccloud",
+      "enabled": false
+    },
+    "agent-orch-servicenow": {
+      "type": "remote",
+      "url": "http://localhost:13999/sse/servicenow",
+      "enabled": false
+    }
+  }
+}

@@ -1,0 +1,36 @@
+# G9 (3/3): a MAPPED query whose bound endpoint is free-form is REJECTED.
+#
+# Contract: RAILS.md §2.A.1. The query IS bound in the manifest (passes Gate B),
+# but its endpoint contains free-form SQL ("SELECT ..."), not a named allowlisted
+# proc. Post-G9, mapped-but-free-form is still `reject` at the safety gate — the
+# forbidden free-form-prod-SQL class stays closed even though unmapped queries now
+# degrade to inert.
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities:
+    - name: adhoc-counts
+      kind: query
+      endpoint: "SELECT count(*) FROM records WHERE run_id = ?"  # free-form binding
+      auth_env: "STORE_DSN"
+      production: true
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: count-records
+  kind: query
+  title: "Count records (bound to a free-form query, not a proc)"
+  audience: [developer]
+  safety: read-only            # authored read-only; Gate A.1 overrides
+  request:
+    capability: adhoc-counts
+    params: { run_id: "run-000123" }
+
+expected:
+  outcome: reject
+  gate: A-safety

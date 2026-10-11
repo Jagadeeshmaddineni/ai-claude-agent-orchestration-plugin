@@ -1,0 +1,15 @@
+{
+  "description": "vault-orch hooks. The Stop hook promotes a finished /make or /build session's prompt.md `## Metadata` block into variant-B frontmatter (jira wikilinks) on its session files, keeping the Obsidian vault current with zero forking of the agent-orch skills. It is fully defensive: it no-ops outside an agent-orch repo, when the vault is not initialised, or when no session is found, and it never blocks or fails the session.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/frontmatter-on-session.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

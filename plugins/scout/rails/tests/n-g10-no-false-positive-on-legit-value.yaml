@@ -1,0 +1,44 @@
+# G10 (4/4): built-ins do NOT over-redact a legit non-secret value.
+#
+# Contract: RAILS.md §7 (G10) — the built-in credential patterns are on (default)
+# but must NOT block ordinary, non-credential output. None of these fields are
+# credential-key tokens, none of the values are a connection-string or key=value
+# credential shape, so nothing is blocked and the step is ALLOWED. This guards
+# against the over-redaction risk called out in the design (Open Questions).
+
+playbook:
+  audience: [developer, support, business]
+  redaction:
+    builtins: on
+    default: safe
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: support
+
+step:
+  id: fetch-run-status
+  kind: api-read
+  title: "Fetch run status"
+  audience: [developer, support, business]
+  safety: read-only
+  request:
+    capability: run-status
+    params: { run_id: "run-000123" }
+
+produced_output:
+  status: "OK"
+  region: "east"
+  record_count: 1420
+  business_date: "2026-07-17"
+  stage: "fetch-complete"
+
+expected:
+  outcome: allow
+  gate: null

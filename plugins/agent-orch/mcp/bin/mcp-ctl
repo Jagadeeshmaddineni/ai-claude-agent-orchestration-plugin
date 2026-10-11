@@ -1,0 +1,358 @@
+#!/usr/bin/env bash
+# MCP Server Control Script
+# Usage: mcp-ctl <command>
+# Commands: start, stop, status, check-setup
+
+set -e
+
+# Paths
+HOME_DIR="${HOME:-$USERPROFILE}"
+# Claude Code stores MCP config in either ~/.claude.json or ~/.claude/settings.json
+CLAUDE_JSON="$HOME_DIR/.claude.json"
+CLAUDE_SETTINGS="$HOME_DIR/.claude/settings.json"
+MCP_CONFIG="$HOME_DIR/.claude/mcp-config.json"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MCP_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Detect platform once. macOS netstat is BSD-style (uses dots, not colons,
+# before the port) and has no -ano flag — so we must not lump it in with
+# Windows/Linux netstat. lsof is the reliable choice on macOS/Linux.
+case "$(uname -s)" in
+  Darwin)              PLATFORM="macos" ;;
+  Linux)               PLATFORM="linux" ;;
+  MINGW*|MSYS*|CYGWIN*) PLATFORM="windows" ;;
+  *)                   PLATFORM="unknown" ;;
+esac
+
+# JSON output helper
+json_output() {
+  local action="$1"
+  local success="$2"
+  local message="$3"
+  local extra="$4"
+
+  if [ "$success" = "true" ]; then
+    echo "{\"action\":\"$action\",\"success\":true,\"message\":\"$message\"$extra}"
+  else
+    echo "{\"action\":\"$action\",\"success\":false,\"error\":\"$message\"$extra}"
+  fi
+}
+
+# Get port from mcp-config.json
+get_port() {
+  if [ -f "$MCP_CONFIG" ]; then
+    local port=$(grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' "$MCP_CONFIG" 2>/dev/null | grep -o '[0-9]*' | head -1)
+    echo "${port:-13999}"
+  else
+    echo "13999"
+  fi
+}
+
+# Check if port is in use. Platform-aware because macOS netstat uses BSD
+# formatting (e.g. "127.0.0.1.13999" not ":13999"), so a single regex can't
+# cover all platforms.
+check_port() {
+  local port="$1"
+  case "$PLATFORM" in
+    macos)
+      if command -v lsof &>/dev/null; then
+        lsof -nP -iTCP:"$port" -sTCP:LISTEN &>/dev/null
+      else
+        netstat -an -p tcp 2>/dev/null | grep -E "\.$port[[:space:]].*LISTEN" -q
+      fi
+      ;;
+    linux)
+      if command -v ss &>/dev/null; then
+        ss -tln 2>/dev/null | grep -q ":$port "
+      elif command -v lsof &>/dev/null; then
+        lsof -nP -iTCP:"$port" -sTCP:LISTEN &>/dev/null
+      else
+        netstat -tln 2>/dev/null | grep -q ":$port "
+      fi
+      ;;
+    windows)
+      netstat -ano 2>/dev/null | grep -E ":$port[[:space:]].*LISTENING" -q
+      ;;
+    *)
+      (echo >/dev/tcp/localhost/$port) 2>/dev/null
+      ;;
+  esac
+}
+
+# Check if our MCP server is running on port
+is_our_server() {
+  local port="$1"
+  local health=$(curl -s --max-time 2 "http://localhost:$port/health" 2>/dev/null)
+  echo "$health" | grep -q "agent-orch-mcp"
+}
+
+# Find a free port starting from given port
+find_free_port() {
+  local start_port="${1:-13999}"
+  local port=$start_port
+  local max_port=$((start_port + 10))
+
+  while [ $port -lt $max_port ]; do
+    if ! check_port $port; then
+      echo $port
+      return 0
+    fi
+    port=$((port + 1))
+  done
+
+  echo ""
+  return 1
+}
+
+# Check setup: ~/.claude.json has MCP servers and mcp-config exists
+cmd_check_setup() {
+  local has_claude_json="false"
+  local has_mcp_servers="false"
+  local has_mcp_config="false"
+
+  # Check ~/.claude.json or ~/.claude/settings.json exists
+  if [ -f "$CLAUDE_JSON" ]; then
+    has_claude_json="true"
+    # Check for our MCP servers (jira, confluence, testrail, azuredevops, playwright, sonarqube, ssccloud, servicenow)
+    if grep -qE '"(jira|confluence|testrail|azuredevops|playwright|sonarqube|ssccloud|servicenow)"' "$CLAUDE_JSON" 2>/dev/null; then
+      has_mcp_servers="true"
+    fi
+  fi
+  # Also check ~/.claude/settings.json (newer Claude Code location)
+  if [ -f "$CLAUDE_SETTINGS" ]; then
+    has_claude_json="true"
+    if grep -qE '"(jira|confluence|testrail|azuredevops|playwright|sonarqube|ssccloud|servicenow)"' "$CLAUDE_SETTINGS" 2>/dev/null; then
+      has_mcp_servers="true"
+    fi
+  fi
+
+  # Check mcp-config.json exists
+  if [ -f "$MCP_CONFIG" ]; then
+    has_mcp_config="true"
+  fi
+
+  local port=$(get_port)
+
+  echo "{\"action\":\"check-setup\",\"claudeJson\":$has_claude_json,\"mcpServers\":$has_mcp_servers,\"mcpConfig\":$has_mcp_config,\"port\":$port}"
+}
+
+# Status command
+cmd_status() {
+  local port=$(get_port)
+
+  if check_port $port; then
+    if is_our_server $port; then
+      local health=$(curl -s --max-time 2 "http://localhost:$port/health" 2>/dev/null)
+      json_output "status" "true" "Server running on port $port" ",\"port\":$port,\"running\":true,\"health\":$health"
+    else
+      json_output "status" "true" "Port $port in use by another process" ",\"port\":$port,\"running\":false,\"portInUse\":true"
+    fi
+  else
+    json_output "status" "true" "Server not running" ",\"port\":$port,\"running\":false"
+  fi
+}
+
+# Start command
+cmd_start() {
+  local port=$(get_port)
+
+  # Step 1: Check setup (check both ~/.claude.json and ~/.claude/settings.json)
+  local has_config="false"
+  if [ -f "$CLAUDE_JSON" ] && grep -qE '"(jira|confluence|testrail|azuredevops|playwright|sonarqube|ssccloud|servicenow)"' "$CLAUDE_JSON" 2>/dev/null; then
+    has_config="true"
+  fi
+  if [ -f "$CLAUDE_SETTINGS" ] && grep -qE '"(jira|confluence|testrail|azuredevops|playwright|sonarqube|ssccloud|servicenow)"' "$CLAUDE_SETTINGS" 2>/dev/null; then
+    has_config="true"
+  fi
+  if [ "$has_config" = "false" ]; then
+    json_output "start" "false" "no_setup" ",\"hint\":\"Run /mcp-setup to configure MCP servers\""
+    return 1
+  fi
+
+  # Step 2: Check mcp-config exists
+  if [ ! -f "$MCP_CONFIG" ]; then
+    json_output "start" "false" "no_config" ",\"hint\":\"Run /mcp-setup to create mcp-config.json\""
+    return 1
+  fi
+
+  # Step 3: Check port
+  if check_port $port; then
+    if is_our_server $port; then
+      json_output "start" "true" "Server already running on port $port" ",\"port\":$port,\"alreadyRunning\":true"
+      return 0
+    else
+      # Port in use by something else, find alternative
+      local free_port=$(find_free_port $((port + 1)))
+      if [ -n "$free_port" ]; then
+        json_output "start" "false" "port_in_use" ",\"port\":$port,\"suggestedPort\":$free_port,\"hint\":\"Port $port is in use. Update mcp-config.json to use port $free_port\""
+      else
+        json_output "start" "false" "no_free_port" ",\"port\":$port,\"hint\":\"No free ports found between $port and $((port + 10))\""
+      fi
+      return 1
+    fi
+  fi
+
+  # Step 4: Check if bun is installed
+  local server_src="$MCP_DIR/src/index.ts"
+
+  if ! command -v bun &>/dev/null; then
+    # Bun not installed - provide platform-specific install command
+    local install_cmd=""
+    case "$(uname -s)" in
+      MINGW*|MSYS*|CYGWIN*)
+        install_cmd="powershell -c \"irm bun.sh/install.ps1 | iex\""
+        ;;
+      Darwin|Linux)
+        install_cmd="curl -fsSL https://bun.sh/install | bash"
+        ;;
+    esac
+    json_output "start" "false" "bun_not_installed" ",\"installCmd\":\"$install_cmd\",\"hint\":\"Bun is required to run the MCP server\""
+    return 1
+  fi
+
+  # Step 5: Start server with bun
+  if [ ! -f "$server_src" ]; then
+    json_output "start" "false" "no_source" ",\"hint\":\"Server source not found at $server_src\""
+    return 1
+  fi
+
+  # Ensure dependencies are installed
+  cd "$MCP_DIR"
+  bun install --frozen-lockfile > /dev/null 2>&1 || bun install > /dev/null 2>&1 || true
+
+  nohup bun run "$server_src" > /dev/null 2>&1 &
+
+  # Step 5: Wait for server to start (max ~20 seconds).
+  # Cold starts on Windows with `bun run` against TS source can take 10s+,
+  # so 5s is too tight and produces false-negative timeouts even when the
+  # server is on its way up.
+  local retries=40
+  while [ $retries -gt 0 ]; do
+    sleep 0.5
+    if is_our_server $port; then
+      json_output "start" "true" "Server started on port $port" ",\"port\":$port"
+      return 0
+    fi
+    retries=$((retries - 1))
+  done
+
+  json_output "start" "false" "start_timeout" ",\"port\":$port,\"hint\":\"Server did not start within 20 seconds\""
+  return 1
+}
+
+# Find PIDs listening on a given port. Returns space-separated list.
+find_pids_on_port() {
+  local port="$1"
+  case "$PLATFORM" in
+    macos|linux)
+      if command -v lsof &>/dev/null; then
+        lsof -nP -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | tr '\n' ' '
+      elif command -v ss &>/dev/null; then
+        ss -tlnp 2>/dev/null | grep ":$port " | grep -oE 'pid=[0-9]+' | cut -d= -f2 | tr '\n' ' '
+      fi
+      ;;
+    windows)
+      # Windows netstat: "  TCP    0.0.0.0:13999    0.0.0.0:0    LISTENING    1234"
+      netstat -ano 2>/dev/null | grep -E ":$port[[:space:]].*LISTENING" | awk '{print $NF}' | sort -u | tr '\n' ' '
+      ;;
+  esac
+}
+
+# Kill a single PID with SIGTERM, then SIGKILL if needed (POSIX) or taskkill /F (Windows).
+kill_pid() {
+  local pid="$1"
+  if [ -z "$pid" ] || [ "$pid" = "0" ]; then
+    return 1
+  fi
+
+  if [ "$PLATFORM" = "windows" ]; then
+    taskkill //F //PID "$pid" > /dev/null 2>&1
+    return $?
+  fi
+
+  # Graceful first — gives bun a chance to flush logs
+  kill -TERM "$pid" 2>/dev/null || return 1
+  local waited=0
+  while [ $waited -lt 6 ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      return 0
+    fi
+    sleep 0.5
+    waited=$((waited + 1))
+  done
+  # Still alive — force
+  kill -KILL "$pid" 2>/dev/null
+}
+
+# Sweep any orphaned bun processes spawned from our MCP_DIR. Belt-and-braces
+# in case bun spawned a worker that didn't die when the parent did.
+sweep_orphan_bun() {
+  [ "$PLATFORM" = "windows" ] && return 0
+  command -v pkill &>/dev/null || return 0
+  pkill -KILL -f "bun.*${MCP_DIR}/src/index.ts" 2>/dev/null || true
+}
+
+# Stop command
+cmd_stop() {
+  local port=$(get_port)
+
+  if ! check_port $port; then
+    json_output "stop" "true" "Server not running" ",\"port\":$port"
+    return 0
+  fi
+
+  if ! is_our_server $port; then
+    json_output "stop" "false" "not_our_server" ",\"port\":$port,\"hint\":\"Process on port $port is not our MCP server\""
+    return 1
+  fi
+
+  local pids
+  pids=$(find_pids_on_port "$port")
+  pids=$(echo "$pids" | xargs)  # trim
+
+  local killed=""
+  if [ -n "$pids" ]; then
+    for pid in $pids; do
+      if kill_pid "$pid"; then
+        killed="${killed}${pid} "
+      fi
+    done
+  fi
+
+  # Settle, then verify
+  sleep 1
+  if check_port $port; then
+    # Targeted kill didn't release the port — sweep bun orphans and retry once
+    sweep_orphan_bun
+    sleep 1
+  fi
+
+  if ! check_port $port; then
+    killed=$(echo "$killed" | xargs)
+    json_output "stop" "true" "Server stopped" ",\"port\":$port,\"pids\":\"${killed:-unknown}\""
+    return 0
+  fi
+
+  json_output "stop" "false" "stop_failed" ",\"port\":$port,\"hint\":\"Port still bound after kill. Try: lsof -iTCP:$port -sTCP:LISTEN (macOS/Linux) or netstat -ano | grep $port (Windows)\""
+  return 1
+}
+
+# Main
+case "${1:-}" in
+  start)
+    cmd_start
+    ;;
+  stop)
+    cmd_stop
+    ;;
+  status)
+    cmd_status
+    ;;
+  check-setup)
+    cmd_check_setup
+    ;;
+  *)
+    echo "{\"action\":\"help\",\"success\":false,\"error\":\"Unknown command\",\"usage\":\"mcp-ctl <start|stop|status|check-setup>\"}"
+    exit 1
+    ;;
+esac

@@ -1,0 +1,27 @@
+{
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "shortest",
+  "useMarkdownLinks": false,
+  "attachmentFolderPath": "vault/attachments",
+  "showFrontmatter": true,
+  "propertiesInDocument": "visible",
+  "userIgnoreFilters": [
+    "node_modules/",
+    "**/node_modules/",
+    ".next/",
+    "**/.next/",
+    "dist/",
+    "**/dist/",
+    "build/",
+    "**/build/",
+    "coverage/",
+    "**/coverage/",
+    ".git/",
+    ".turbo/",
+    "**/.turbo/",
+    "out/",
+    "**/out/",
+    ".venv/",
+    "target/"
+  ]
+}

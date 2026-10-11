@@ -1,0 +1,51 @@
+# =============================================================================
+# agent-orch — Pluggable GitHub Issues Workflow
+# =============================================================================
+# Configures the GitHub Issues backend of the tracker-provider contract: how the
+# issue lifecycle (in-progress / in-review / done) maps onto GitHub, which has no
+# rich transitions like Jira — only open/closed, labels, and optional Projects v2.
+#
+# EVERYTHING is commented out: a commented file behaves exactly like no file. With
+# no file, the GitHub backend uses the DEFAULT `labels` status model shown below
+# (and auto-creates the status labels on first use). Zero extra setup required.
+#
+# This file only matters when `tracker: github` is selected in .make-config.md
+# (or tracker.provider: github in tracker.yaml). For Jira, see jira-workflow.yaml.
+#
+# Full contract: plugins/agent-orch/rules/tracker-provider.md §4
+#                plugins/agent-orch/rules/extensibility.md §6
+# =============================================================================
+
+# github:
+#   enabled: true                  # false → skip GitHub entirely (like tracker: none)
+#
+#   # How issue status is modeled. Default: labels (works on any repo, no Projects).
+#   status_model: labels           # labels | project
+#
+#   # --- labels mode ----------------------------------------------------------
+#   # Lifecycle key → label to apply (set_status adds it, removes the other
+#   # status labels). `close` is special: it closes the issue via `gh issue close`.
+#   statuses:
+#     in_progress: "status:in-progress"
+#     in_review:   "status:in-review"
+#     done:        close
+#
+#   # --- project mode (opt-in) -------------------------------------------------
+#   # Drive a GitHub Projects v2 single-select Status field via gh project /
+#   # GraphQL. Requires a project-scoped token. Only used when status_model: project.
+#   # project:
+#   #   number: 7                   # the Projects v2 number
+#   #   field:  "Status"            # the single-select field name
+#   #   in_progress: "In Progress"  # option names within that field
+#   #   in_review:   "In Review"
+#   #   done:        "Done"
+#
+#   # Optional: override the governance harness labels (defaults shown).
+#   # harness_label: claude-code-agent-harness
+#   # review_label:  human-review-required
+#
+#   # Optional extra steps at lifecycle events (same mechanism as jira-workflow).
+#   # lifecycle:
+#   #   on_start:  [docs/github/on-start.md]
+#   #   on_review: [scripts/post-pr-to-issue.sh]
+#   #   on_done:   [docs/github/on-done.md]

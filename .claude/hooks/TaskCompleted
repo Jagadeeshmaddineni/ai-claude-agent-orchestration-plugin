@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+#
+# TaskCompleted Hook - Verification Gate Enforcement
+#
+# This hook runs when a task is being marked complete and enforces
+# the verification gate requirement for builder and validator agents.
+#
+# Exit codes:
+#   0 = Allow task completion
+#   2 = Block completion and send feedback to agent
+#   1 = Error (treated as allow)
+#
+# Environment variables provided:
+#   TASK_CONTENT: The task description
+#   TASK_STATUS: The new status (should be "completed")
+#   AGENT_NAME: The agent marking the task complete (if available)
+#   TEAM_NAME: The team name (if using agent teams)
+#   SESSION_DIR: Current session directory path
+
+set -euo pipefail
+
+# Extract session directory from PLAN.md location or use env variable
+SESSION_DIR="${SESSION_DIR:-}"
+
+# Try to find session directory if not provided
+if [[ -z "$SESSION_DIR" ]]; then
+    # Look for active ssnc-agent-orch session
+    if [[ -d "ssnc-agent-orch" ]]; then
+        # Get most recent session directory
+        SESSION_DIR=$(find ssnc-agent-orch -maxdepth 1 -type d -name "20*" | sort -r | head -1)
+    fi
+fi
+
+# If we still don't have a session directory, allow completion (might not be agent-orch workflow)
+if [[ -z "$SESSION_DIR" ]] || [[ ! -d "$SESSION_DIR" ]]; then
+    exit 0
+fi
+
+STATUS_FILE="$SESSION_DIR/STATUS.md"
+TASK_CONTENT="${TASK_CONTENT:-}"
+TASK_STATUS="${TASK_STATUS:-}"
+AGENT_NAME="${AGENT_NAME:-}"
+
+# Only enforce for implementation and validation tasks
+if [[ "$TASK_CONTENT" =~ (implement|build|create|add|write.*test|validate|test) ]]; then
+
+    # Check if STATUS.md exists
+    if [[ ! -f "$STATUS_FILE" ]]; then
+        echo "⚠️  STATUS.md not found at $STATUS_FILE"
+        echo "Cannot verify completion evidence."
+        exit 2
+    fi
+
+    # Read STATUS.md content
+    STATUS_CONTENT=$(cat "$STATUS_FILE")
+
+    # Determine which agent type we're checking
+    AGENT_TYPE=""
+    if [[ "$AGENT_NAME" =~ builder ]] || [[ "$TASK_CONTENT" =~ implement|create|add ]]; then
+        AGENT_TYPE="Builder"
+    elif [[ "$AGENT_NAME" =~ validator ]] || [[ "$TASK_CONTENT" =~ test|validate ]]; then
+        AGENT_TYPE="Validator"
+    fi
+
+    if [[ -n "$AGENT_TYPE" ]]; then
+        # Check for evidence markers in STATUS.md
+        EVIDENCE_FOUND=false
+
+        # Look for verification evidence patterns
+        if echo "$STATUS_CONTENT" | grep -q "### Evidence"; then
+            EVIDENCE_FOUND=true
+        elif echo "$STATUS_CONTENT" | grep -q "### Verification Command"; then
+            EVIDENCE_FOUND=true
+        elif echo "$STATUS_CONTENT" | grep -q "VERIFIED COMPLETE"; then
+            EVIDENCE_FOUND=true
+        elif echo "$STATUS_CONTENT" | grep -q "Test Suites:.*passed"; then
+            # Validator might have test output
+            EVIDENCE_FOUND=true
+        elif echo "$STATUS_CONTENT" | grep -q "Tests:.*passed"; then
+            EVIDENCE_FOUND=true
+        fi
+
+        if [[ "$EVIDENCE_FOUND" == "false" ]]; then
+            # Block completion and provide feedback
+            cat <<EOF
+
+🚫 VERIFICATION GATE BLOCKED
+
+Task: $TASK_CONTENT
+Agent: $AGENT_TYPE
+
+Missing verification evidence in STATUS.md.
+
+Before marking this task complete, you MUST:
+
+1. Run a verification command (tests, build, linter, etc.)
+2. Capture the FULL output
+3. Add evidence section to STATUS.md:
+
+   ## ${AGENT_TYPE} Task Completion
+
+   ### Task: ${TASK_CONTENT}
+
+   ### Verification Command
+   \`\`\`bash
+   [your verification command]
+   \`\`\`
+
+   ### Evidence
+   \`\`\`
+   [full command output showing success]
+   \`\`\`
+
+   ### Status: VERIFIED COMPLETE
+
+4. Then mark the task complete
+
+Prohibited phrases (without evidence):
+- "should work"
+- "seems to be working"
+- "probably passes"
+- "Done!" / "Complete!"
+
+EOF
+            exit 2
+        fi
+    fi
+fi
+
+# If we get here, either:
+# - Not an implementation/test task
+# - Evidence was found
+# - Agent type couldn't be determined (allow by default)
+exit 0

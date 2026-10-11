@@ -1,0 +1,47 @@
+# Trap case (b): a step returning a `never_return` value is REDACTED / BLOCKED.
+#
+# Contract: RAILS.md Gate F / §7. The playbook marks "connection strings" as
+# never_return. The step's output contains one, so the redaction pass BLOCKS the
+# output and the engine rejects the emission (INV-6). The never_return value must
+# NOT appear anywhere in the emitted DecisionRecord.
+
+playbook:
+  audience: [developer, support]
+  redaction:
+    never_return:
+      - "connection string"
+      - "credentials"
+    default: safe
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: support
+
+step:
+  id: fetch-run-status
+  kind: api-read
+  title: "Fetch run status"
+  audience: [developer, support]
+  safety: read-only
+  request:
+    capability: run-status
+    params: { run_id: "run-000123" }
+
+# Raw output the step produced — contains a never_return value.
+produced_output:
+  status: "FAILED"
+  debug_dsn: "connection string: host=db user=svc password=hunter2"
+
+# The engine must never let this substring into the DecisionRecord.
+must_not_appear_in_record:
+  - "hunter2"
+
+expected:
+  outcome: reject
+  gate: F-redaction

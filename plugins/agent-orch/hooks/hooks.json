@@ -1,0 +1,35 @@
+{
+  "description": "Agent orchestration plugin hooks for session startup, verification gates, and AI code governance",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"Agent orchestration plugin loaded. Pick the entry point that fits the task: /agent-orch:brainstorm (design before code) -> /agent-orch:build (standalone) or /agent-orch:implement (spec-kit); /agent-orch:bugfix (root-cause fix); /agent-orch:make (full feature lifecycle: worktree/branch + PR); /agent-orch:make-bug (bug-fix lifecycle: worktree/branch + PR). If a skill might apply, invoke it to check.\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/validate-ai-commit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/guard-worktree-writes.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

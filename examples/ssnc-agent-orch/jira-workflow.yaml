@@ -1,0 +1,29 @@
+# =============================================================================
+# agent-orch — Pluggable Jira Workflow
+# =============================================================================
+# Externalise the Jira flow that /make, /build, and /make-clean use. EVERYTHING
+# is commented out: a commented file behaves exactly like no file. The skills
+# fall back to .claude/rules/jira.md + their current hard-coded flow.
+#
+# When `jira.enabled` is set, the skills use the values below IN PLACE OF the
+# hard-coded IDs, falling back to .claude/rules/jira.md for any key omitted here.
+#
+# Full contract: plugins/agent-orch/rules/extensibility.md §4
+# =============================================================================
+
+# jira:
+#   enabled: true                  # false → skip Jira entirely (like jira_mode: no)
+#
+#   transitions:                   # transition IDs (or names) the skills drive
+#     in_progress: "21"
+#     in_review:   "31"
+#     done:        "41"
+#
+#   fields:                        # custom-field IDs the skills set
+#     start_date: "customfield_10015"
+#     end_date:   "customfield_10016"
+#
+#   lifecycle:                     # optional extra steps at lifecycle events
+#     on_start:  [docs/jira/on-start.md]
+#     on_review: [scripts/post-pr-to-jira.sh]
+#     on_done:   [docs/jira/on-done.md]

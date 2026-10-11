@@ -1,0 +1,41 @@
+# Positive-path guard: a well-formed read-only step is ALLOWED, and a maskable
+# field is masked (not blocked) so allowed output is returned redacted, never raw.
+#
+# Contract: RAILS.md — passes Gates A-E, Gate F applies a `mask` rule. Proves the
+# happy path and that `allow` means "allowed AND redacted", never "allowed raw".
+
+playbook:
+  audience: [developer, support, business]
+  redaction:
+    mask:
+      - field: account_number
+        strategy: last4
+    default: safe
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: support
+
+step:
+  id: fetch-run-status
+  kind: api-read
+  title: "Fetch run status"
+  audience: [developer, support]
+  safety: read-only
+  request:
+    capability: run-status
+    params: { run_id: "run-000123" }
+
+produced_output:
+  status: "OK"
+  account_number: "1234567890"
+
+expected:
+  outcome: allow
+  gate: null

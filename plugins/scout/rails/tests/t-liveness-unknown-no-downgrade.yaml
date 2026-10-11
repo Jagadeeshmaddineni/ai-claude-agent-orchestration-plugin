@@ -1,0 +1,39 @@
+# v0.4 (5/5): UNKNOWN liveness does NOT downgrade on §6.2 alone (don't over-fire).
+#
+# Contract: RAILS.md §6.2 (v0.4). The guardrail downgrades a confirmed verdict
+# ONLY when a load-bearing step came back `empty` or `no-op`. Here the evidence
+# step's liveness is `unknown` (not determinable — e.g. a legitimate zero vs a
+# no-op couldn't be told apart), so §6.2 must NOT downgrade on this rule alone.
+# The conclusion renders at its authored `confirmed` (gate null). This proves the
+# guardrail is heuristic-SAFE: it never fires on ambiguous liveness, only on a
+# proven empty/no-op source. (A v0.3 produced_output with NO liveness at all is
+# likewise treated as unknown -> no downgrade: backward compatible.)
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities: []
+
+caller_tier: developer
+
+conclusion:
+  id: data-present
+  when: "spans returned for the trace id"
+  verdict: "The data landed as expected."
+  confidence: confirmed            # authored confirmed
+  guidance: "No action needed."
+  from_steps: [svc-traces]
+  audience: [developer, support]
+
+step_records:
+  svc-traces:
+    step_id: query-traces
+    resolved_env: production
+    liveness: unknown              # not determinable -> §6.2 must NOT downgrade
+
+expected:
+  outcome: allow
+  gate: null                       # no downgrade; rendered at authored confidence
+  liveness: null

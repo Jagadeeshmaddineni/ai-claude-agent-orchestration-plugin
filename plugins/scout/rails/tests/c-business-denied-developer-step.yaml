@@ -1,0 +1,38 @@
+# Trap case (c): a business-tier caller is DENIED a developer-only step.
+#
+# Contract: RAILS.md Gate C / §5.C.1. The step's audience is [developer]; the
+# caller is business. business ∉ step.audience → reject. Governance tiers are
+# inherited from the manifest role_map (INV-8), but the audience gate is the same.
+
+playbook:
+  audience: [developer, support, business]
+  redaction: { default: safe }
+
+manifest:
+  capabilities:
+    - name: mount-inspect
+      kind: shell-read
+      endpoint: "ls -la <mount>/<segment>/"
+      auth_env: "SSH_KEY_PATH"
+      safety: read-only
+  governance:
+    role_map:
+      developer: ["engineer"]
+      support: ["ops"]
+      business: ["readonly"]
+      admin: ["engineer"]
+
+caller_tier: business
+
+step:
+  id: inspect-mount
+  kind: shell-read
+  title: "Inspect the mount directly (developer-only)"
+  audience: [developer]          # narrower than playbook — legal narrowing
+  safety: read-only
+  request:
+    capability: mount-inspect
+
+expected:
+  outcome: reject
+  gate: C-audience

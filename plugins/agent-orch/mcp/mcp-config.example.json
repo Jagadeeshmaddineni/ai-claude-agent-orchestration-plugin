@@ -1,0 +1,53 @@
+{
+  "port": 13999,
+  "logging": true,
+  "jira": {
+    "enabled": false,
+    "deploymentType": "cloud",
+    "host": "ssctech.atlassian.net",
+    "email": "",
+    "token": "",
+    "scope": "write"
+  },
+  "confluence": {
+    "enabled": false,
+    "host": "confluence.ssnc-corp.cloud",
+    "token": "",
+    "scope": "write"
+  },
+  "testrail": {
+    "enabled": false,
+    "url": "https://blueprism.testrail.io",
+    "email": "",
+    "apiKey": "",
+    "scope": "write"
+  },
+  "azureDevOps": {
+    "enabled": false,
+    "baseUrl": "https://dev.azure.com",
+    "organizations": {},
+    "scope": "write"
+  },
+  "playwright": {
+    "enabled": false,
+    "headless": true,
+    "browserType": "chromium",
+    "defaultTimeout": 30000,
+    "screenshotDir": "./screenshots",
+    "scope": "write"
+  },
+  "sonarqube": {
+    "enabled": false,
+    "url": "https://sonarcloud.io",
+    "token": "",
+    "organization": "",
+    "scope": "read"
+  },
+  "servicenow": {
+    "enabled": false,
+    "url": "https://ssctech.service-now.com",
+    "username": "",
+    "password": "",
+    "scope": "read"
+  }
+}

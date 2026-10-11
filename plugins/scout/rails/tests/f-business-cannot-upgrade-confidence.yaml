@@ -1,0 +1,30 @@
+# Trap case (f): a business-tier answer cannot UPGRADE a `likely` conclusion to `confirmed`.
+#
+# Contract: RAILS.md Gate D / §6. The conclusion is authored `likely`. A business-tier
+# rendering that attempts to present it as `confirmed` is rejected — a lower-privilege
+# surface may never present above the authored confidence. The correct behavior is to
+# render at (or below) the authored level ("likely — verify").
+
+playbook:
+  audience: [developer, support, business]
+  redaction: { default: safe }
+
+manifest:
+  capabilities: []
+
+caller_tier: business
+
+conclusion:
+  id: landed-late
+  when: "files absent at run time but present now"
+  verdict: "Data landed after the run started."
+  confidence: likely               # authored confidence
+  guidance: "Re-run the job now."
+  audience: [developer, support, business]
+
+# The surface attempts to present it more strongly than authored.
+presented_confidence: confirmed
+
+expected:
+  outcome: reject
+  gate: D-confidence

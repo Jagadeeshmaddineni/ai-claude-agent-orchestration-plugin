@@ -1,0 +1,8 @@
+{
+  "name": "claude-agent-orchestration-plugin",
+  "version": "2.48.0",
+  "description": "Multi-agent orchestration for Claude Code and OpenCode",
+  "type": "module",
+  "main": ".opencode/plugins/agent-orch.js",
+  "keywords": ["agent-orch", "orchestration", "multi-agent", "skills", "opencode", "claude-code"]
+}

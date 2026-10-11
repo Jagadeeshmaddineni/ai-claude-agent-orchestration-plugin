@@ -1,0 +1,13 @@
+# ── vault-orch (Obsidian) ────────────────────────────────────────────────
+# Per-user UI state and per-plugin data hold local layout + access tokens.
+# They must NOT be committed. The shared config (app.json, core-plugins.json,
+# community-plugins.json), templates/, and dashboards/ ARE committed so the
+# vault provisions identically for every teammate.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/plugins/*/data.json
+.obsidian/plugins/*/*.json.bak
+.obsidian/cache
+.obsidian/*.json.bak
+# Obsidian attachments captured locally (optional — uncomment to ignore):
+# vault/attachments/

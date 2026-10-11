@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+#
+# TeammateIdle Hook - Agent Accountability Check
+#
+# This hook runs when a teammate is about to go idle (finish their work).
+# Ensures agents have completed their work properly with evidence before
+# they can mark themselves as done.
+#
+# Exit codes:
+#   0 = Allow idle (agent can finish)
+#   2 = Keep working and send feedback to agent
+#   1 = Error (treated as allow)
+#
+# Environment variables provided:
+#   AGENT_ID: The agent's unique identifier
+#   AGENT_NAME: The agent's name (e.g., "Builder", "Validator")
+#   AGENT_TYPE: The agent type (e.g., "agent-orch:orchestrate-builder")
+#   TEAM_NAME: The team name
+#   SESSION_DIR: Current session directory path (if available)
+
+set -euo pipefail
+
+AGENT_NAME="${AGENT_NAME:-}"
+AGENT_TYPE="${AGENT_TYPE:-}"
+TEAM_NAME="${TEAM_NAME:-}"
+SESSION_DIR="${SESSION_DIR:-}"
+
+# Try to find session directory if not provided
+if [[ -z "$SESSION_DIR" ]]; then
+    # Look for active ssnc-agent-orch session
+    if [[ -d "ssnc-agent-orch" ]]; then
+        # Get most recent session directory
+        SESSION_DIR=$(find ssnc-agent-orch -maxdepth 1 -type d -name "20*" | sort -r | head -1)
+    fi
+fi
+
+# If no session directory, this might not be an agent-orch workflow
+if [[ -z "$SESSION_DIR" ]] || [[ ! -d "$SESSION_DIR" ]]; then
+    exit 0
+fi
+
+STATUS_FILE="$SESSION_DIR/STATUS.md"
+PLAN_FILE="$SESSION_DIR/PLAN.md"
+
+# Only check Builder and Validator agents
+if [[ ! "$AGENT_TYPE" =~ (orchestrate-builder|orchestrate-validator) ]]; then
+    exit 0
+fi
+
+# Determine agent type for messaging
+AGENT_ROLE=""
+if [[ "$AGENT_TYPE" =~ builder ]]; then
+    AGENT_ROLE="Builder"
+elif [[ "$AGENT_TYPE" =~ validator ]]; then
+    AGENT_ROLE="Validator"
+fi
+
+if [[ -z "$AGENT_ROLE" ]]; then
+    exit 0
+fi
+
+# Check if STATUS.md exists
+if [[ ! -f "$STATUS_FILE" ]]; then
+    cat <<EOF
+
+🚫 STATUS.md NOT FOUND
+
+You're trying to mark yourself idle, but STATUS.md doesn't exist.
+
+Before going idle, you must:
+1. Create/update $STATUS_FILE
+2. Document your work
+3. Provide verification evidence
+
+EOF
+    exit 2
+fi
+
+# Read STATUS.md
+STATUS_CONTENT=$(cat "$STATUS_FILE")
+
+# Check for completion marker
+COMPLETION_MARKER_FOUND=false
+if echo "$STATUS_CONTENT" | grep -q "## Agent Completion: $AGENT_ROLE"; then
+    COMPLETION_MARKER_FOUND=true
+elif echo "$STATUS_CONTENT" | grep -q "## $AGENT_ROLE.*Completion"; then
+    COMPLETION_MARKER_FOUND=true
+fi
+
+# Check for verification evidence
+VERIFICATION_FOUND=false
+if echo "$STATUS_CONTENT" | grep -q "VERIFIED COMPLETE"; then
+    VERIFICATION_FOUND=true
+elif echo "$STATUS_CONTENT" | grep -q "### Evidence"; then
+    VERIFICATION_FOUND=true
+elif echo "$STATUS_CONTENT" | grep -q "Test Suites:.*passed"; then
+    VERIFICATION_FOUND=true
+fi
+
+# If Builder, check for test output evidence
+if [[ "$AGENT_ROLE" == "Builder" ]]; then
+    if [[ "$VERIFICATION_FOUND" == "false" ]]; then
+        cat <<EOF
+
+🚫 BUILDER ACCOUNTABILITY CHECK FAILED
+
+You're trying to go idle, but there's no verification evidence in STATUS.md.
+
+Before going idle, you MUST provide evidence that your work is complete:
+
+## Agent Completion: Builder
+**Timestamp**: $(date -Iseconds)
+**Status**: ✅ COMPLETED
+**Tasks Completed**: [list completed tasks]
+**Files Modified**: [list files]
+
+### Verification Command
+\`\`\`bash
+npm test  # or your verification command
+\`\`\`
+
+### Evidence
+\`\`\`
+[ACTUAL test output showing tests pass]
+\`\`\`
+
+**Status**: VERIFIED COMPLETE
+
+Add this to $STATUS_FILE then try again.
+
+EOF
+        exit 2
+    fi
+fi
+
+# If Validator, check for test results
+if [[ "$AGENT_ROLE" == "Validator" ]]; then
+    TEST_RESULTS_FOUND=false
+
+    if echo "$STATUS_CONTENT" | grep -E "Tests:.*passed" | grep -qv "0 passed"; then
+        TEST_RESULTS_FOUND=true
+    elif echo "$STATUS_CONTENT" | grep -q "Test Suites:.*passed"; then
+        TEST_RESULTS_FOUND=true
+    elif echo "$STATUS_CONTENT" | grep -q "Coverage:"; then
+        TEST_RESULTS_FOUND=true
+    fi
+
+    if [[ "$TEST_RESULTS_FOUND" == "false" ]]; then
+        cat <<EOF
+
+🚫 VALIDATOR ACCOUNTABILITY CHECK FAILED
+
+You're trying to go idle, but there are no test results in STATUS.md.
+
+Before going idle, you MUST provide actual test output:
+
+## Agent Completion: Validator
+**Timestamp**: $(date -Iseconds)
+**Status**: ✅ COMPLETED
+
+### Test Command
+\`\`\`bash
+npm test -- --coverage
+\`\`\`
+
+### Evidence
+\`\`\`
+Test Suites: X passed, X total
+Tests:       X passed, X total
+Coverage:
+  Statements: XX%
+  Branches: XX%
+  Functions: XX%
+  Lines: XX%
+\`\`\`
+
+### Spec Compliance Verified
+[Table showing requirements verified against spec]
+
+**Status**: VERIFIED COMPLETE
+
+Add this to $STATUS_FILE then try again.
+
+EOF
+        exit 2
+    fi
+fi
+
+# Check if there are incomplete tasks in PLAN.md assigned to this agent
+if [[ -f "$PLAN_FILE" ]]; then
+    PLAN_CONTENT=$(cat "$PLAN_FILE")
+
+    # Look for incomplete tasks assigned to this agent
+    INCOMPLETE_TASKS=$(echo "$PLAN_CONTENT" | grep -E "^- \[ \].*\(assigned: $AGENT_ROLE\)" || true)
+
+    if [[ -n "$INCOMPLETE_TASKS" ]]; then
+        cat <<EOF
+
+🚫 INCOMPLETE TASKS FOUND
+
+You're trying to go idle, but you have incomplete tasks in PLAN.md:
+
+$INCOMPLETE_TASKS
+
+Either:
+1. Complete these tasks
+2. Update PLAN.md if they're no longer needed
+3. Reassign them to another agent
+
+Then try again.
+
+EOF
+        exit 2
+    fi
+fi
+
+# If we get here, the agent has:
+# - Created STATUS.md
+# - Provided verification evidence
+# - Completed their assigned tasks (or none were assigned)
+exit 0

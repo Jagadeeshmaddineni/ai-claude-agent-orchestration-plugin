@@ -1,0 +1,38 @@
+# Database Standards
+
+These standards apply when working in this directory.
+
+## Query Standards
+
+```typescript
+// Always use parameterized queries
+const user = await db.query(
+  'SELECT * FROM users WHERE id = $1',
+  [userId]
+);
+
+// Never do this
+const user = await db.query(`SELECT * FROM users WHERE id = ${userId}`);
+```
+
+## Migrations
+
+- All schema changes require migrations
+- Migrations must be reversible
+- Test rollback before deploying
+- Name migrations descriptively: `YYYYMMDD_HHMMSS_add_email_to_users`
+
+## Naming Conventions
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Tables | snake_case, plural | `user_accounts` |
+| Columns | snake_case | `created_at` |
+| Indexes | `idx_[table]_[columns]` | `idx_users_email` |
+| Foreign keys | `fk_[table]_[ref_table]` | `fk_orders_users` |
+
+## Performance
+
+- Add indexes for frequently queried columns
+- Use EXPLAIN ANALYZE for query optimization
+- Avoid N+1 queries -- use JOINs or batch loading

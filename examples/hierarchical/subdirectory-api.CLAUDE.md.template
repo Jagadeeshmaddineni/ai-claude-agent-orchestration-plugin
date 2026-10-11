@@ -1,0 +1,47 @@
+# API Standards
+
+These standards apply when working in this directory.
+
+## REST Conventions
+
+| Action | Method | Path | Response |
+|--------|--------|------|----------|
+| List | GET | `/api/v1/users` | 200 + array |
+| Get | GET | `/api/v1/users/:id` | 200 + object |
+| Create | POST | `/api/v1/users` | 201 + object |
+| Update | PUT | `/api/v1/users/:id` | 200 + object |
+| Delete | DELETE | `/api/v1/users/:id` | 204 |
+
+## Validation
+
+- Validate all input at API boundary
+- Use [Zod/Joi/class-validator] for schema validation
+- Return 400 with validation errors
+
+## Response Format
+
+### Success
+
+```json
+{
+  "data": { ... },
+  "meta": { "page": 1, "total": 100 }
+}
+```
+
+### Error
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "User not found",
+    "details": {}
+  }
+}
+```
+
+## Versioning
+
+- Use URL-based versioning: `/api/v1/`, `/api/v2/`
+- Deprecate old versions with headers before removal

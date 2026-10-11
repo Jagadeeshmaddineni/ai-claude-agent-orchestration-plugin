@@ -1,0 +1,22 @@
+# =============================================================================
+# agent-orch — Issue Tracker Selector
+# =============================================================================
+# Selects which issue-tracker backend the orchestration skills use. This is the
+# single switch that lets a repo "swap" between Jira and GitHub Issues while the
+# rest of the workflow (/make, /build, /make-clean, the work queue) stays the same.
+#
+# EVERYTHING is commented out: with no file, the active tracker is resolved from
+# .make-config.md (`tracker:`, else `jira_mode:` back-compat), defaulting to jira.
+# Zero behaviour change by default.
+#
+# Precedence: this file > .make-config.md tracker: > .make-config.md jira_mode: > jira
+#
+# Full contract: plugins/agent-orch/rules/tracker-provider.md §1
+# =============================================================================
+
+# tracker:
+#   provider: github               # jira | github | none
+#
+#   # jira   → cache via /agent-orch:jira          → .claude/rules/jira.md   (mcp__jira__*)
+#   # github → cache via /agent-orch:github-issues → .claude/rules/github.md (gh on code.ssnc.dev)
+#   # none   → no issue tracker (skills skip all tracker steps)

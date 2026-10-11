@@ -1,0 +1,34 @@
+# Frontend / Component Library Standards
+
+These standards apply when working in this directory.
+
+## Design System
+
+```
+COMPONENT_LIBRARY_ROOT: /path/to/Component-Library
+DOCS_ROOT: ${COMPONENT_LIBRARY_ROOT}/packages/ui-docs/src
+```
+
+## Available Packages
+
+| Package | Components |
+|---------|------------|
+| @org/bsds-core | Button, Input, Layout, Stack |
+| @org/ui-modal | Modal, Dialog |
+| @org/ui-toast | Toast notifications |
+
+## Rules
+
+- Always check if a design system component exists before creating custom
+- No hardcoded colors -- use theme tokens
+- No hardcoded spacing -- use spacing scale
+- Maintain WCAG 2.1 AA accessibility
+
+## Accessibility
+
+- All interactive elements must be keyboard-navigable
+- Images require alt text
+- Form inputs require labels
+- Color contrast ratio minimum 4.5:1 for normal text
+- Use semantic HTML elements (`<nav>`, `<main>`, `<article>`)
+- Test with screen reader (VoiceOver/NVDA)

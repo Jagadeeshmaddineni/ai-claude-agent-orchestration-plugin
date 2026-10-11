@@ -1,0 +1,44 @@
+# =============================================================================
+# team-work — Skill Extension Config
+# =============================================================================
+# Add hook-point steps to any team-work skill. EVERYTHING is commented out:
+# a commented file behaves exactly like no file — ZERO behaviour change.
+#
+# A skill only honours hook points it exposes (see each skill's "## Extensibility"
+# section). Most team-work skills expose a `before` / `after` pair around their
+# main work; some expose richer points (noted inline).
+#
+# Target syntax (see plugins/agent-orch/rules/extensibility.md §6):
+#   scripts/foo.sh | foo.py    → run a script step
+#   docs/checklist.md | *.md   → read-and-act on markdown
+#   .loop-library/foo.yaml     → run a loop-library loop
+#   /team-work:work-lint       → invoke a skill inline
+#
+# Full contract: plugins/agent-orch/rules/extensibility.md
+# =============================================================================
+
+# skills:
+
+  # --- Knowledge layer --------------------------------------------------------
+  # work-wiki:        { before: [], after: [] }
+  # work-ingest:      { before: [], after: [] }
+  # work-ask:         { before: [], after: [] }
+  # work-lint:        { before: [], after: [] }
+  # work-upgrade:     { before: [], after: [] }
+  # work-publish:                          # exposes before_publish, after_publish
+  #   before_publish: [scripts/check-pages-perms.sh]
+  #   after_publish:  [scripts/announce-site.sh]
+  # wiki-source:      { before: [], after: [] }
+  # wiki-source-branch: { before: [], after: [] }
+
+  # --- Planning → release -----------------------------------------------------
+  # work-prep:        { before: [], after: [] }
+  # work-plan:        { before: [], after: [] }
+  # work-pop:         { before: [], after: [] }
+  # work-report:      { before: [], after: [] }
+  # work-recap:       { before: [], after: [] }
+  # groom:            { before: [], after: [] }
+  # create-release:                        # exposes before_tag, after_release
+  #   before_tag:     [scripts/changelog.sh]
+  #   after_release:  [scripts/notify-stakeholders.sh]
+  # plugin-feedback:  { before: [], after: [] }

@@ -1,0 +1,301 @@
+# CLAUDE.md Template for Agent Orchestration (DEPRECATED)
+
+> **DEPRECATED**: This monolithic template is kept for backward compatibility.
+> Use the hierarchical templates in `examples/hierarchical/` instead.
+> The hierarchical structure reduces agent context by 70-85% (from ~46k to ~7.5k tokens).
+> Run `/agent-orch:setup-claude-md` to set up the hierarchical structure automatically.
+
+This template shows the recommended sections for your project's `CLAUDE.md` file when using the `/agent-orch:build` skill (standalone mode without spec-kit).
+
+Copy this to your project root as `CLAUDE.md` and customize for your project.
+
+---
+
+## Project Overview
+
+<!-- Brief description of what this project does -->
+[Project name] is a [type of application] that [primary purpose].
+
+**Tech Stack:**
+- Language: [e.g., TypeScript, Python, Go]
+- Framework: [e.g., Next.js, Express, FastAPI]
+- Database: [e.g., PostgreSQL, MongoDB]
+- Testing: [e.g., Jest, pytest, go test]
+
+---
+
+## Code Standards
+
+### Language & Style
+
+<!-- Define your coding standards -->
+- Use [TypeScript/JavaScript] with strict mode enabled
+- Follow [ESLint/Prettier] configuration in the project
+- Prefer [async/await] over callbacks
+- Use [named exports] over default exports
+
+### Naming Conventions
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Files | kebab-case | `user-service.ts` |
+| Classes | PascalCase | `UserService` |
+| Functions | camelCase | `getUserById` |
+| Constants | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
+| Interfaces | PascalCase with I prefix (optional) | `IUserRepository` or `UserRepository` |
+
+### File Organization
+
+```
+src/
+├── api/           # API routes/controllers
+├── services/      # Business logic
+├── models/        # Data models/entities
+├── repositories/  # Data access layer
+├── middleware/    # Express/framework middleware
+├── utils/         # Shared utilities
+└── types/         # TypeScript type definitions
+```
+
+---
+
+## Testing Standards
+
+### Requirements
+
+- Minimum coverage: [80%]
+- All new code must have tests
+- Test naming: `describe('[Unit]', () => { it('should [expected behavior]') })`
+
+### Test Organization
+
+```
+tests/
+├── unit/          # Unit tests (isolated)
+├── integration/   # Integration tests (with dependencies)
+└── e2e/           # End-to-end tests
+```
+
+### Running Tests
+
+```bash
+# All tests
+npm test
+
+# With coverage
+npm test -- --coverage
+
+# Specific file
+npm test -- --grep "user"
+```
+
+---
+
+## Error Handling
+
+### Pattern
+
+```typescript
+// Use custom error classes
+class NotFoundError extends Error {
+  constructor(resource: string) {
+    super(`${resource} not found`);
+    this.name = 'NotFoundError';
+  }
+}
+
+// Always catch and handle appropriately
+try {
+  const user = await userService.getById(id);
+} catch (error) {
+  if (error instanceof NotFoundError) {
+    return res.status(404).json({ error: error.message });
+  }
+  throw error; // Re-throw unexpected errors
+}
+```
+
+### Error Response Format
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "User not found",
+    "details": {}
+  }
+}
+```
+
+---
+
+## API Design
+
+### REST Conventions
+
+| Action | Method | Path | Response |
+|--------|--------|------|----------|
+| List | GET | `/api/v1/users` | 200 + array |
+| Get | GET | `/api/v1/users/:id` | 200 + object |
+| Create | POST | `/api/v1/users` | 201 + object |
+| Update | PUT | `/api/v1/users/:id` | 200 + object |
+| Delete | DELETE | `/api/v1/users/:id` | 204 |
+
+### Validation
+
+- Validate all input at API boundary
+- Use [Zod/Joi/class-validator] for schema validation
+- Return 400 with validation errors
+
+---
+
+## Security Requirements
+
+### Authentication
+
+- Use [JWT/Session] for authentication
+- Tokens expire after [1 hour]
+- Refresh tokens valid for [7 days]
+
+### Authorization
+
+- Check permissions before data access
+- Use middleware for route protection
+- Never expose sensitive data in responses
+
+### Data Protection
+
+- Hash passwords with bcrypt (cost factor 12+)
+- Encrypt sensitive data at rest
+- Use parameterized queries only (no string concatenation)
+- Sanitize all user input
+
+---
+
+## Database
+
+### Query Standards
+
+```typescript
+// Always use parameterized queries
+const user = await db.query(
+  'SELECT * FROM users WHERE id = $1',
+  [userId]
+);
+
+// Never do this
+const user = await db.query(`SELECT * FROM users WHERE id = ${userId}`);
+```
+
+### Migrations
+
+- All schema changes require migrations
+- Migrations must be reversible
+- Test rollback before deploying
+
+---
+
+## Component Library (Frontend Projects)
+
+<!-- Remove this section if not a frontend project -->
+
+### Design System
+
+```
+COMPONENT_LIBRARY_ROOT: /path/to/Component-Library
+DOCS_ROOT: ${COMPONENT_LIBRARY_ROOT}/packages/ui-docs/src
+```
+
+### Available Packages
+
+| Package | Components |
+|---------|------------|
+| @org/bsds-core | Button, Input, Layout, Stack |
+| @org/ui-modal | Modal, Dialog |
+| @org/ui-toast | Toast notifications |
+
+### Rules
+
+- Always check if a design system component exists before creating custom
+- No hardcoded colors - use theme tokens
+- No hardcoded spacing - use spacing scale
+- Maintain WCAG 2.1 AA accessibility
+
+---
+
+## Git Workflow
+
+### Branch Naming
+
+- `feature/[ticket]-short-description`
+- `fix/[ticket]-short-description`
+- `refactor/short-description`
+
+### Commit Messages
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+### AI Code Governance
+
+AI-generated code requires special handling to protect organizational IP:
+
+1. **Separate commits** - Claude Code contributions must be committed separately from human-written code. Never mix both in the same commit.
+2. **Co-authored-by trailer** - All AI-generated commits must include:
+   ```
+   Co-authored-by: Claude Code
+   ```
+3. **Enterprise GitHub** - All code must live in the enterprise GitHub org.
+4. **Code hygiene** - Standard dependency management, no unlicensed code, follow org coding guidelines.
+
+> **Legal note:** This guidance is generally applicable but not a substitute for your own legal review. If your BU deploys software in regulated environments, confirm this policy meets those requirements with your legal team.
+
+---
+
+## Environment Variables
+
+### Required
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | Database connection string | `postgresql://...` |
+| `JWT_SECRET` | Secret for JWT signing | (generate secure random) |
+| `NODE_ENV` | Environment | `development`, `production` |
+
+### Optional
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LOG_LEVEL` | Logging verbosity | `info` |
+| `PORT` | Server port | `3000` |
+
+---
+
+## Agent Orchestration Notes
+
+<!-- This section helps the agents understand your project -->
+
+### Key Files to Understand
+
+- `src/index.ts` - Application entry point
+- `src/config/` - Configuration loading
+- `src/middleware/auth.ts` - Authentication middleware
+
+### Patterns to Follow
+
+When implementing new features, follow the pattern in:
+- API routes: `src/api/users.ts`
+- Services: `src/services/user-service.ts`
+- Tests: `tests/unit/services/user-service.test.ts`
+
+### Known Technical Debt
+
+- [ ] Auth module needs refactoring (legacy code)
+- [ ] Missing integration tests for payment flow

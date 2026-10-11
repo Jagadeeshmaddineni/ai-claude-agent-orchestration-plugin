@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/agent-orch-models.schema.json",
+  "commit_attribution": {
+    "harness": "claude-code",
+    "trailer_format": "Co-authored-by: {gh_user} + {harness}/{models} <{gh_user}@users.noreply.github.com>"
+  },
+  "aliases": {
+    "thinking": "opus",
+    "instruct": "sonnet"
+  },
+  "agents": {
+    "orchestrate-advocate": "thinking",
+    "orchestrate-architect": "thinking",
+    "orchestrate-debugger": "thinking",
+    "orchestrate-incident-responder": "thinking",
+    "orchestrate-legacy-modernizer": "thinking",
+    "orchestrate-quality-reviewer": "thinking",
+    "orchestrate-spec-reviewer": "thinking",
+    "orchestrate-api": "instruct",
+    "orchestrate-builder": "instruct",
+    "orchestrate-c4-scribe": "instruct",
+    "orchestrate-content-specialist": "instruct",
+    "orchestrate-data-engineer": "instruct",
+    "orchestrate-database": "instruct",
+    "orchestrate-devops": "instruct",
+    "orchestrate-jira-triage": "instruct",
+    "orchestrate-migration": "instruct",
+    "orchestrate-ml-engineer": "instruct",
+    "orchestrate-observability": "instruct",
+    "orchestrate-performance": "instruct",
+    "orchestrate-private-cloud": "instruct",
+    "orchestrate-refactorer": "instruct",
+    "orchestrate-scribe": "instruct",
+    "orchestrate-security": "instruct",
+    "orchestrate-telemetry": "instruct",
+    "orchestrate-uiux": "instruct",
+    "orchestrate-validator": "instruct"
+  }
+}

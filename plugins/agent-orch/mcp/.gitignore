@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+.*.bun-build
+bin/mcp-server-*
+
+# Credentials (keep .example files)
+.env
+mcp-config.json
+
+# OS files
+.DS_Store
+Thumbs.db

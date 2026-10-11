@@ -1,0 +1,41 @@
+# G2: the DecisionRecord records which ENVIRONMENT a capability resolved to.
+#
+# Contract: RAILS.md §8 (G2) resolved_env. The bound capability carries
+# `production: true`, so the emitted DecisionRecord records resolved_env:
+# production. This is the env-binding signal the confidence gate uses (documented
+# in RAILS.md §6.1) to refuse `confirmed` on a data-gap verdict unless the
+# load-bearing capability resolved to the environment that owns the data. The
+# investigate skill (WS5) enforces the conclusion side; the rails capture it here.
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      production: true            # this capability owns PRODUCTION data
+      safety: read-only
+
+caller_tier: developer
+
+step:
+  id: fetch-run-status
+  kind: api-read
+  title: "Fetch run status from the production API"
+  audience: [developer, support]
+  safety: read-only
+  request:
+    capability: run-status
+    params: { run_id: "run-000123" }
+
+produced_output:
+  status: "OK"
+
+expected:
+  outcome: allow
+  gate: null
+  resolved_env: production

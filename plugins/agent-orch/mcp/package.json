@@ -1,0 +1,22 @@
+{
+  "name": "agent-orch-mcp",
+  "version": "0.3.1",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "build": "bash build.sh",
+    "build:windows": "bun build --compile --target=bun-windows-x64 src/index.ts --outfile bin/mcp-server-win-x64.exe",
+    "build:darwin-x64": "bun build --compile --target=bun-darwin-x64 src/index.ts --outfile bin/mcp-server-darwin-x64",
+    "build:darwin-arm64": "bun build --compile --target=bun-darwin-arm64 src/index.ts --outfile bin/mcp-server-darwin-arm64",
+    "build:linux": "bun build --compile --target=bun-linux-x64 src/index.ts --outfile bin/mcp-server-linux-x64"
+  },
+  "dependencies": {
+    "azure-devops-node-api": "^15.1.2",
+    "pino": "^10.3.1",
+    "playwright": "^1.49.0",
+    "zod": "3.24.4"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0"
+  }
+}

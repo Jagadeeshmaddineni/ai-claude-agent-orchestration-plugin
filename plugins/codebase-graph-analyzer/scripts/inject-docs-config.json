@@ -1,0 +1,15 @@
+{
+  "include_patterns": ["**/*.md"],
+  "exclude_patterns": [
+    "**/node_modules/**",
+    "**/CHANGELOG*.md",
+    "**/.code-review-graph/**",
+    "**/vendor/**",
+    "**/.git/**"
+  ],
+  "cross_reference_detection": true,
+  "min_heading_level": 1,
+  "max_heading_level": 4,
+  "signature_max_chars": 200,
+  "params_keywords_max": 10
+}

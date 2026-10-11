@@ -1,0 +1,40 @@
+# v0.4 (4/5): a conclusion from an EMPTY/no-op load-bearing step is DOWNGRADED (§6.2).
+#
+# Contract: RAILS.md §6.2 (v0.4), mirrors §6.1. The conclusion is authored
+# `confirmed` and its from_steps includes `svc-traces`, whose DecisionRecord
+# carries liveness: no-op (the trace source returned no usable spans). A
+# confirmed verdict resting on a no-op source is downgraded to "likely — verify":
+# this is what stops "confirmed: recommend the trace tool" when spans are actually
+# a no-op, and "confirmed: no data" when a query silently hit an empty/wrong source. The
+# guardrail is downgrade-only: outcome stays `allow` but at capped confidence,
+# emitting gate D-confidence + liveness: empty-or-no-op for the audit trail.
+
+playbook:
+  audience: [developer, support]
+  redaction: { default: safe }
+
+manifest:
+  capabilities: []
+
+caller_tier: developer
+
+conclusion:
+  id: data-absent
+  when: "no spans found for the trace id"
+  verdict: "The data has not landed."
+  confidence: confirmed            # authored confirmed
+  guidance: "Recommend enabling the trace source."
+  from_steps: [svc-traces]
+  audience: [developer, support]
+
+# The load-bearing step's DecisionRecord: the trace source came back no-op.
+step_records:
+  svc-traces:
+    step_id: query-traces
+    resolved_env: production
+    liveness: no-op
+
+expected:
+  outcome: allow
+  gate: D-confidence               # downgrade fired (capped at likely-verify)
+  liveness: empty-or-no-op

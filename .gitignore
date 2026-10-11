@@ -1,0 +1,57 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Agent orchestration session files (repo-root build sessions only).
+# Anchored with a leading slash so it does NOT match the .claude/ssnc-agent-orch/
+# extension-config directory, which IS committed.
+/ssnc-agent-orch/
+
+# Git worktrees
+.worktrees/
+
+# /make session state (owned by /make and /make-clean — never committed)
+# v1 (legacy single file) and v2 (per-Claude with timestamp + PID)
+.claude/.make-session.json
+.claude/.make-session-*.json
+
+# MCP credentials
+mcp/.env
+
+
+# MCP compiled binaries
+mcp/bin/
+
+mcp/node_modules/
+mcp/bun.lock
+
+# Needed for inheriting opensourced plugin, but should not be committed to git
+.inherit-plugin-state.json
+
+# code-review-graph local storage sqlite db
+.code-review-graph/
+
+# team-work wiki: qmd search index (derived from markdown, rebuilt on demand)
+**/.qmd/
+
+# Extensibility framework: cached external git-workflow clones
+.claude/ssnc-agent-orch/.cache/
+
+# Python virtual environments (machine-specific, recreated by /mainframe-analyzer:start)
+.venv/
+**/\.venv/
+
+# Python bytecode
+__pycache__/
+**/__pycache__/
+*.pyc

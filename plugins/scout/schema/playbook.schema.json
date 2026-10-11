@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://code.ssnc.dev/ai/claude-agent-orchestration-plugin/plugins/scout/schema/playbook.schema.json",
+  "title": "Scout Playbook",
+  "description": "Declarative contract for a Scout support/investigation/procedure playbook (v0.3). See playbook.schema.md for the normative prose spec.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "audience", "inputs", "steps", "conclusions", "redaction"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": { "const": "scout/v0.3" },
+    "kind": { "const": "Playbook" },
+    "metadata": {
+      "type": "object",
+      "required": ["id", "title", "summary", "owner", "triggers"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": ["investigation", "procedure", "toolbox"],
+          "default": "investigation",
+          "description": "Playbook class. 'investigation' (default) = diagnose to a confidence-gated verdict (the existing model). 'procedure' = an ordered operational runbook (promote, sync-secrets, refresh-eso) run by /scout:runbook. 'toolbox' (v0.4) = a how-to-use/interpret-a-tool playbook, composed as a sub-procedure by other playbooks; never routed to by symptom."
+        },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "last_verified": { "type": "string", "format": "date" },
+        "source": { "type": "string", "description": "Provenance: the doc/runbook a harvested playbook was drafted from (v0.2)." },
+        "status": { "enum": ["draft", "active", "deprecated"], "description": "Lifecycle status; /scout:harvest sets draft (v0.2)." },
+        "roles": {
+          "type": "array",
+          "description": "Investigator role(s) best suited to run this playbook in orchestrated mode (v0.2).",
+          "items": { "enum": ["infra", "data", "app", "security", "observability", "incident", "generic"] }
+        },
+        "triggers": {
+          "type": "object",
+          "required": ["keywords"],
+          "additionalProperties": false,
+          "properties": {
+            "keywords": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "severity_hint": { "enum": ["sev1", "sev2", "sev3", "sev4"], "description": "Default severity when this playbook matches (v0.2)." },
+            "signals": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["source", "matches"],
+                "additionalProperties": false,
+                "properties": {
+                  "source": { "type": "string" },
+                  "matches": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "audience": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["developer", "support", "business", "admin"] }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "required", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+          "type": { "enum": ["string", "number", "date", "enum", "boolean"] },
+          "required": { "type": "boolean" },
+          "description": { "type": "string" },
+          "example": {},
+          "values": { "type": "array" }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "title", "audience"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "kind": { "enum": ["api-read", "query", "diagnostic-query", "shell-read", "skill-call", "agent-investigate", "guided-human", "time-travel", "note"] },
+          "title": { "type": "string", "minLength": 1 },
+          "audience": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "enum": ["developer", "support", "business", "admin"] }
+          },
+          "safety": { "enum": ["read-only", "needs-approval", "forbidden"] },
+          "on_error": { "enum": ["continue", "halt", "escalate"] },
+          "emits": {
+            "type": "array",
+            "description": "Named outputs this step produces (v0.3, G1). A later step references one as `${steps.<step-id>.<name>}` in its params. Redaction-gated like any output.",
+            "items": { "type": "string", "pattern": "^[a-z0-9_]+$" }
+          },
+          "binds": {
+            "type": "array",
+            "description": "Named outputs from earlier steps this step consumes (v0.3, G1). Each entry is a `${steps.<step-id>.<name>}` reference this step reads. Documentation/provenance aid; params carry the actual references.",
+            "items": { "type": "string" }
+          },
+          "sweep": {
+            "type": "object",
+            "description": "Parameter-matrix on a query/diagnostic-query step (v0.3, G3): each key is a request param, each value a list of values. The step runs once per combination; results are reported per-variant.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "array",
+              "minItems": 1
+            }
+          },
+          "required_params": {
+            "type": "array",
+            "description": "Request params that MUST be present for this step to run (v0.3, G8). A runner will not attempt a widening that drops these.",
+            "items": { "type": "string" }
+          },
+          "widenable_params": {
+            "type": "array",
+            "description": "Request params that MAY be dropped/relaxed when widening the search (v0.3, G8). A runner only widens along these.",
+            "items": { "type": "string" }
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "kind": { "enum": ["api-read", "query", "diagnostic-query", "shell-read", "skill-call", "agent-investigate", "time-travel"] } } },
+            "then": { "required": ["safety"] }
+          },
+          {
+            "if": { "properties": { "kind": { "enum": ["api-read", "query", "diagnostic-query", "shell-read", "time-travel"] } } },
+            "then": {
+              "required": ["request"],
+              "properties": { "request": { "type": "object", "required": ["capability"] } }
+            }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "skill-call" } } },
+            "then": {
+              "required": ["request"],
+              "properties": { "request": { "type": "object", "required": ["skill"] } }
+            }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "agent-investigate" } } },
+            "then": {
+              "required": ["request"],
+              "properties": { "request": { "type": "object", "required": ["role", "objective"] } }
+            }
+          },
+          {
+            "if": { "properties": { "kind": { "const": "guided-human" } } },
+            "then": { "required": ["instructions"] }
+          }
+        ]
+      }
+    },
+    "conclusions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "when", "verdict", "confidence"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "when": { "type": "string", "minLength": 1 },
+          "verdict": { "type": "string", "minLength": 1 },
+          "confidence": { "enum": ["confirmed", "likely", "unknown"] },
+          "guidance": { "type": "string" },
+          "from_steps": {
+            "type": "array",
+            "description": "Step ids whose evidence supports this conclusion (v0.3). Makes step->conclusion linkage explicit and machine-checkable for multi-symptom playbooks.",
+            "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+          },
+          "audience": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "enum": ["developer", "support", "business", "admin"] }
+          }
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "required": ["default"],
+      "additionalProperties": false,
+      "properties": {
+        "never_return": {
+          "type": "array",
+          "description": "Values that must never appear in output. String form (heuristic match) OR structured {field_path} form (deterministic) — v0.2 adds the structured form.",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "required": ["field_path"],
+                "additionalProperties": false,
+                "properties": { "field_path": { "type": "string" } }
+              }
+            ]
+          }
+        },
+        "mask": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["field", "strategy"],
+            "additionalProperties": false,
+            "properties": {
+              "field": { "type": "string" },
+              "strategy": { "enum": ["last4", "hash", "full-mask"] }
+            }
+          }
+        },
+        "default": { "enum": ["safe", "permissive"] },
+        "builtins": {
+          "enum": ["on", "off", true, false],
+          "default": "on",
+          "description": "When on (default, v0.3, G10), the engine ALSO applies built-in credential patterns (password/token/secret/dsn/connection-string/key=value) regardless of author wording, using normalized/token-boundary matching (not naive substring). Set off only to opt out. Accepts the strings 'on'/'off' AND the YAML booleans true/false, because unquoted `builtins: on` / `builtins: off` parse as YAML 1.1 booleans (true/false); the WS2 engine treats only explicit off/false/no/0 as disabled, so all four values resolve correctly. Engine behavior lives in WS2; this is the schema toggle."
+        }
+      }
+    },
+    "incident": {
+      "type": "object",
+      "description": "Incident-class behavior (v0.2; applies to kind: investigation). Absent → the playbook behaves as an ordinary non-incident playbook.",
+      "additionalProperties": false,
+      "properties": {
+        "timeline": { "type": "boolean", "description": "Maintain a running, redacted timeline for this investigation." },
+        "postmortem": { "enum": ["create-rfo", "none"], "description": "On resolution, offer to generate a postmortem (delegates to /agent-orch:create-rfo)." }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

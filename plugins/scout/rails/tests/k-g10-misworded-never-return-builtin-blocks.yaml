@@ -1,0 +1,47 @@
+# G10 (1/4): a mis-worded never_return still BLOCKS via built-in patterns.
+#
+# Contract: RAILS.md §7 (G10). The author wrote never_return: ["connection strings"]
+# (PLURAL) but the leaked value is a "connection string:" (SINGULAR) carrying a
+# password=... credential. The pre-G10 naive substring match ("connection strings"
+# in value) FAILED to block this — a real secret leak. Post-G10 it is blocked
+# TWO ways: token-boundary matching folds plural/singular, AND the built-in
+# credential patterns (default on) catch the password=... shape regardless of the
+# author's wording. The credential value must not appear in the DecisionRecord.
+
+playbook:
+  audience: [developer, support]
+  redaction:
+    never_return:
+      - "connection strings"     # PLURAL / mis-worded on purpose
+    default: safe
+
+manifest:
+  capabilities:
+    - name: run-status
+      kind: api-read
+      endpoint: "GET /api/runs/{id}/status"
+      auth_env: "API_TOKEN"
+      safety: read-only
+
+caller_tier: support
+
+step:
+  id: fetch-run-status
+  kind: api-read
+  title: "Fetch run status"
+  audience: [developer, support]
+  safety: read-only
+  request:
+    capability: run-status
+    params: { run_id: "run-000123" }
+
+produced_output:
+  status: "FAILED"
+  debug_dsn: "connection string: host=db user=svc password=hunter2"
+
+must_not_appear_in_record:
+  - "hunter2"
+
+expected:
+  outcome: reject
+  gate: F-redaction

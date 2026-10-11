@@ -1,0 +1,38 @@
+# v0.4 (3/5): a business-tier caller is DENIED a developer-only TOOLBOX tool (Gate C bites).
+#
+# Contract: RAILS.md Gate C / §5.C.1 + §4 (v0.4). Ambient scope must never widen
+# access: an ambient toolbox tool still respects audience tiers. The step's
+# audience is [developer]; the caller is business. business ∉ step.audience ->
+# reject at C-audience — even though the tool resolved from investigation_toolbox[].
+# Ambient changes DISCOVERY, never AUTHORITY.
+
+playbook:
+  audience: [developer, support, business]
+  redaction: { default: safe }
+
+manifest:
+  capabilities: []
+  investigation_toolbox:
+    - name: db-read
+      kind: query
+      endpoint: "proc:sp_read_rows_by_key"   # named allowlisted proc
+      auth_env: "STORE_DSN"
+      ambient: true
+      safety: read-only
+
+caller_tier: business
+
+step:
+  id: read-rows
+  kind: query
+  title: "Read rows via the toolbox (developer-only step)"
+  audience: [developer]          # narrower than playbook — legal narrowing
+  safety: read-only
+  request:
+    capability: db-read
+    params: { key: "run-000123" }
+
+expected:
+  outcome: reject
+  gate: C-audience
+  resolved_from: investigation_toolbox

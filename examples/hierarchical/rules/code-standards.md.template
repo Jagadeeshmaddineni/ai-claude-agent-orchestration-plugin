@@ -1,0 +1,67 @@
+# Code Standards
+
+These standards apply to ALL code in this project.
+
+## Language & Style
+
+- Use [TypeScript/JavaScript] with strict mode enabled
+- Follow [ESLint/Prettier] configuration in the project
+- Prefer [async/await] over callbacks
+- Use [named exports] over default exports
+
+## Naming Conventions
+
+| Type | Convention | Example |
+|------|------------|---------|
+| Files | kebab-case | `user-service.ts` |
+| Classes | PascalCase | `UserService` |
+| Functions | camelCase | `getUserById` |
+| Constants | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
+| Interfaces | PascalCase with I prefix (optional) | `IUserRepository` or `UserRepository` |
+
+## File Organization
+
+```
+src/
++-- api/           # API routes/controllers
++-- services/      # Business logic
++-- models/        # Data models/entities
++-- repositories/  # Data access layer
++-- middleware/     # Express/framework middleware
++-- utils/         # Shared utilities
++-- types/         # TypeScript type definitions
+```
+
+## Error Handling
+
+```typescript
+// Use custom error classes
+class NotFoundError extends Error {
+  constructor(resource: string) {
+    super(`${resource} not found`);
+    this.name = 'NotFoundError';
+  }
+}
+
+// Always catch and handle appropriately
+try {
+  const user = await userService.getById(id);
+} catch (error) {
+  if (error instanceof NotFoundError) {
+    return res.status(404).json({ error: error.message });
+  }
+  throw error; // Re-throw unexpected errors
+}
+```
+
+### Error Response Format
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "User not found",
+    "details": {}
+  }
+}
+```

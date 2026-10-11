@@ -1,0 +1,74 @@
+# meta-orch story lock — atomic claim via GitHub Actions concurrency.
+#
+# Installed into .github/workflows/ by /meta-orch:design-tech-plan (or on first
+# /make-session run). Serialises story claims so two sessions starting at the
+# same instant cannot both claim the same story.
+#
+# The `concurrency` group is keyed per-issue, so GitHub runs at most ONE lock
+# attempt at a time for a given story. cancel-in-progress is false: attempts
+# queue, they do not clobber each other. The job re-reads the issue and only
+# claims it if still unlocked; otherwise it FAILS, which /make-session reads as
+# "someone beat me to it".
+name: meta-orch-lock
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Story issue number to lock"
+        required: true
+      actor:
+        description: "Login of the engineer/session claiming the story"
+        required: true
+      session_id:
+        description: "meta-orch session id (UTC_TS-PID)"
+        required: true
+
+# One lock attempt at a time PER STORY. This is the atomicity guarantee.
+concurrency:
+  group: meta-orch-lock-${{ github.event.inputs.issue }}
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+
+jobs:
+  claim:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Attempt atomic claim
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.inputs.issue }}
+          ACTOR: ${{ github.event.inputs.actor }}
+          SESSION_ID: ${{ github.event.inputs.session_id }}
+        run: |
+          set -euo pipefail
+
+          echo "Attempting to lock issue #${ISSUE} for ${ACTOR} (session ${SESSION_ID})"
+
+          # Re-read current labels under the concurrency lock.
+          LABELS=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name] | join(",")')
+          echo "Current labels: $LABELS"
+
+          if echo "$LABELS" | tr ',' '\n' | grep -qx "meta:locked"; then
+            echo "::error::Issue #${ISSUE} is already locked. Claim rejected."
+            exit 1
+          fi
+
+          if ! echo "$LABELS" | tr ',' '\n' | grep -qx "meta:gate-open"; then
+            echo "::error::Issue #${ISSUE} is not gate-open. Claim rejected."
+            exit 1
+          fi
+
+          # Claim it: add lock, flip gate, assign, comment.
+          gh issue edit "$ISSUE" \
+            --add-label "meta:locked" \
+            --add-label "status:in-progress" \
+            --remove-label "meta:gate-open" \
+            --add-assignee "$ACTOR" || true
+
+          gh issue comment "$ISSUE" --body \
+            "🔒 Locked by session \`${SESSION_ID}\` (@${ACTOR}) via meta-orch-lock at $(date -u +%Y-%m-%dT%H:%M:%SZ). Gate closed, status → in-progress."
+
+          echo "Locked #${ISSUE} for ${ACTOR}."

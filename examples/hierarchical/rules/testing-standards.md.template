@@ -1,0 +1,31 @@
+# Testing Standards
+
+These standards apply to ALL code in this project.
+
+## Requirements
+
+- Minimum coverage: [80%]
+- All new code must have tests
+- Test naming: `describe('[Unit]', () => { it('should [expected behavior]') })`
+
+## Test Organization
+
+```
+tests/
++-- unit/          # Unit tests (isolated)
++-- integration/   # Integration tests (with dependencies)
++-- e2e/           # End-to-end tests
+```
+
+## Running Tests
+
+```bash
+# All tests
+npm test
+
+# With coverage
+npm test -- --coverage
+
+# Specific file
+npm test -- --grep "user"
+```
